@@ -522,7 +522,7 @@ Até mais!`
       setLogoPreview(prefix, '');
     }
 
-    function fitImageDataUrl(img, maxSide = 480, cornerRadius = 18) {
+    function fitImageDataUrl(img, maxSide = 480, cornerRadius = 26) {
       const iw = img.naturalWidth || img.width || maxSide;
       const ih = img.naturalHeight || img.height || maxSide;
       const scale = Math.min(1, maxSide / Math.max(iw, ih));
@@ -533,8 +533,12 @@ Até mais!`
       canvas.height = h;
       const ctx = canvas.getContext('2d');
       const r = Math.min(cornerRadius, w / 3, h / 3);
+      const overscan = 1.03;
+      const drawW = w * overscan;
+      const drawH = h * overscan;
+      const drawX = (w - drawW) / 2;
+      const drawY = (h - drawH) / 2;
 
-      // Fundo branco sólido antes do recorte evita quinas pretas na exportação para PDF
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(0, 0, w, h);
 
@@ -554,7 +558,7 @@ Até mais!`
 
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(0, 0, w, h);
-      ctx.drawImage(img, 0, 0, w, h);
+      ctx.drawImage(img, drawX, drawY, drawW, drawH);
       ctx.restore();
 
       return {
@@ -574,7 +578,7 @@ Até mais!`
       reader.onload = () => {
         const img = new Image();
         img.onload = () => {
-          const { dataUrl } = fitImageDataUrl(img, 480, 22);
+          const { dataUrl } = fitImageDataUrl(img, 480, 26);
           setLogoPreview(prefix, dataUrl);
         };
         img.onerror = () => toast('Não foi possível carregar a imagem');
@@ -621,7 +625,7 @@ Até mais!`
               h = maxH;
               w = h * ratio;
             }
-            const fitted = fitImageDataUrl(img, 480, 22);
+            const fitted = fitImageDataUrl(img, 480, 26);
             resolve({ dataUrl: fitted.dataUrl, w, h });
           } catch (e) {
             resolve(null);
