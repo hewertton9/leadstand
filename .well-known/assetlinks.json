@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.hewertton9.leadstand",
+      "sha256_cert_fingerprints": [
+        "9B:8A:49:49:09:6E:32:58:5D:A9:F4:A8:EB:A0:71:30:D5:30:0C:B4:C4:B3:D3:62:2E:0D:33:35:3A:8A:6D:40"
+      ]
+    }
+  }
+]
