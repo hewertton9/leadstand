@@ -1270,7 +1270,109 @@ Até mais!`
       if (precisaOnboarding()) { mostrarOnboarding(); return; }
       showScreen(location.hash.slice(1) || 'home', true);
     });
-    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
+
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  let atualizacaoAplicada = false;
+
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (atualizacaoAplicada) return;
+    atualizacaoAplicada = true;
+    window.location.reload();
+  });
+
+  navigator.serviceWorker.register('./sw.js', {
+    updateViaCache: 'none'
+  }).then(registration => {
+
+    function mostrarAvisoAtualizacao() {
+      if (!registration.waiting) return;
+
+      if (document.getElementById('leadstand-update')) return;
+
+      const aviso = document.createElement('div');
+      aviso.id = 'leadstand-update';
+
+      aviso.style.cssText = `
+        position:fixed;
+        bottom:20px;
+        left:16px;
+        right:16px;
+        z-index:99999;
+        background:#0B1120;
+        color:white;
+        padding:16px;
+        border-radius:14px;
+        box-shadow:0 8px 30px rgba(0,0,0,.3);
+        display:flex;
+        align-items:center;
+        justify-content:space-between;
+        gap:12px;
+        font-family:Arial,sans-serif;
+      `;
+
+      aviso.innerHTML = `
+        <div>
+          <strong style="display:block;font-size:14px">
+            Nova versão disponível!
+          </strong>
+          <span style="font-size:12px;color:#cbd5e1">
+            Atualize para usar as novidades do LeadStand.
+          </span>
+        </div>
+        <button id="leadstand-update-btn"
+          style="
+            background:#E11D48;
+            color:white;
+            border:0;
+            padding:11px 14px;
+            border-radius:9px;
+            font-weight:bold;
+            white-space:nowrap;
+          ">
+          Atualizar
+        </button>
+      `;
+
+      document.body.appendChild(aviso);
+
+      document.getElementById('leadstand-update-btn')
+        .addEventListener('click', () => {
+          const worker = registration.waiting;
+          if (worker) {
+            worker.postMessage('ATIVAR_ATUALIZACAO');
+          }
+        });
+    }
+
+    if (registration.waiting) {
+      mostrarAvisoAtualizacao();
+    }
+
+    registration.addEventListener('updatefound', () => {
+      const novoWorker = registration.installing;
+      if (!novoWorker) return;
+
+      novoWorker.addEventListener('statechange', () => {
+        if (
+          novoWorker.state === 'installed' &&
+          navigator.serviceWorker.controller
+        ) {
+          mostrarAvisoAtualizacao();
+        }
+      });
+    });
+
+    registration.update().catch(() => {});
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        registration.update().catch(() => {});
+      }
+    });
+
+  }).catch(() => {});
+}
+
 
     if (precisaOnboarding()) {
       mostrarOnboarding();
