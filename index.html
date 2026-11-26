@@ -716,20 +716,17 @@ Até mais!`
       if (!b) return;
       const e = curEvent();
       const hoje = !!e && e.data === ymd(new Date());
-      const base = 'justify-self-start min-w-0 max-w-full h-11 flex items-center gap-2.5 pl-3 pr-2.5 rounded-2xl border shadow-sm text-left active:scale-[0.98] transition ';
+      const base = 'justify-self-start min-w-0 max-w-full h-10 flex items-center gap-2 px-3 rounded-full text-sm font-medium active:scale-95 transition ';
       if (!e) {
-        b.className = base + 'bg-white border-dashed border-rose-300 text-primary';
-        b.innerHTML = '<span class="w-5 h-5 rounded-full bg-rose-50 flex items-center justify-center shrink-0 text-sm font-bold leading-none">+</span>' +
-          '<span class="min-w-0"><span class="block text-[9px] font-semibold tracking-widest uppercase text-slate-400">Nenhum ativo</span><span class="block text-sm font-semibold leading-tight">Criar evento</span></span>';
+        b.className = base + 'bg-rose-50 text-primary';
+        b.innerHTML = '<span class="font-bold leading-none">+</span><span class="truncate">Criar evento</span>';
         return;
       }
       const dot = hoje
         ? '<span class="relative flex w-2 h-2 shrink-0"><span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span><span class="relative inline-flex w-2 h-2 rounded-full bg-emerald-500"></span></span>'
         : '<span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span>';
-      const chev = '<svg class="w-4 h-4 shrink-0 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M8 9l4 4 4-4"/></svg>';
-      b.className = base + (hoje ? 'bg-white border-slate-200 text-slate-800' : 'bg-amber-50 border-amber-200 text-amber-900');
-      b.innerHTML = dot + '<span class="min-w-0 flex-1"><span class="block text-[9px] font-semibold tracking-widest uppercase ' + (hoje ? 'text-emerald-600' : 'text-amber-600') + '">' +
-        (hoje ? 'Ao vivo' : 'Evento de ' + fmtBR(e.data).slice(0, 5)) + '</span><span class="block text-sm font-semibold leading-tight truncate">' + esc(e.nome) + '</span></span>' + chev;
+      b.className = base + (hoje ? 'bg-slate-100 text-slate-700' : 'bg-amber-50 text-amber-800');
+      b.innerHTML = dot + '<span class="truncate">' + esc(e.nome) + '</span>';
     }
 
     function mudarMes(n) { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + n, 1); renderCalendario(); }
