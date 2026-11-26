@@ -89,13 +89,16 @@
 
   <!-- ========== HEADER ========== -->
   <header id="app-header" class="bg-white border-b border-slate-100 sticky top-0 z-40">
-    <div class="max-w-lg mx-auto px-4 py-3 flex items-center justify-center relative">
-      <button onclick="showScreen('home')" aria-label="LeadStand – Início" class="flex items-center">
+    <div class="max-w-lg mx-auto px-4 py-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+      <button onclick="showScreen('eventos')" aria-label="Novo evento" class="justify-self-start w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center active:scale-95 transition">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+      </button>
+      <button onclick="showScreen('home')" aria-label="LeadStand – Início" class="justify-self-center flex items-center">
         <span style="display:block;width:38px;height:38px;border-radius:11px;background:linear-gradient(145deg,#FB7185,#E11D48 55%,#BE123C);box-shadow:0 4px 12px rgba(225,29,72,.3)">
           <svg viewBox="0 0 64 64" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M12 32 L32 14 L52 32 M17 29 V50 H47 V29"/><g fill="#fff" stroke="none"><circle cx="32" cy="34" r="5"/><path d="M23 50 a9 9 0 0 1 18 0 Z"/></g></svg>
         </span>
       </button>
-      <button onclick="showScreen('config')" aria-label="Configurações" class="absolute right-4 w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">
+      <button onclick="showScreen('config')" aria-label="Configurações" class="justify-self-end w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">
         <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
       </button>
     </div>
@@ -249,7 +252,10 @@
 
     <!-- ===== EVENTOS / CALENDÁRIO ===== -->
     <section id="screen-eventos" class="hidden fade-in">
-      <div class="mb-4"><h2 class="text-2xl font-bold">Eventos</h2><p class="text-sm text-slate-500">Toque num dia para ver ou criar o evento</p></div>
+      <div class="mb-4">
+        <h2 class="text-2xl font-bold">Eventos</h2>
+        <p class="text-sm text-slate-500">Crie o evento do stand. Você pode ter vários no mesmo dia.</p>
+      </div>
       <div class="bg-white rounded-2xl p-4 card mb-4">
         <div class="flex items-center justify-between mb-3">
           <button onclick="mudarMes(-1)" aria-label="Mês anterior" class="w-9 h-9 rounded-full bg-slate-100 text-lg">‹</button>
@@ -633,13 +639,14 @@ Até mais!`
       const inp = document.getElementById('ev-nome');
       const nome = inp.value.trim();
       if (!nome) { toast('Digite o nome do evento'); inp.focus(); return; }
-      const ev = { id: Date.now().toString(), nome, data: calSel };
+      const ev = { id: Date.now().toString(), nome, data: calSel || ymd(new Date()) };
       events.push(ev);
       currentEventId = ev.id;
       save();
       inp.value = '';
-      toast('Evento criado! Pode cadastrar os leads.');
-      showScreen('novo');
+      toast('Evento criado!');
+      // Vai pro Home já com o evento ativo
+      showScreen('home');
     }
 
     function abrirEvento(id) { currentEventId = id; save(); showScreen('leads'); }
@@ -959,7 +966,15 @@ Até mais!`
       esconderOnboarding();
       loadConfigUI();
       toast(`Bem-vindo(a), ${nome}!`);
-      showScreen(events.length ? 'home' : 'eventos');
+      // Sempre leva para criar o primeiro evento
+      showScreen('eventos');
+      setTimeout(() => {
+        const inp = document.getElementById('ev-nome');
+        if (inp) {
+          inp.focus();
+          toast('Crie o evento do stand para começar');
+        }
+      }, 400);
     }
 
     function salvarConfig() {
@@ -1006,6 +1021,9 @@ Até mais!`
     });
     document.getElementById('onb-imob')?.addEventListener('keydown', e => {
       if (e.key === 'Enter') { e.preventDefault(); salvarOnboarding(); }
+    });
+    document.getElementById('ev-nome')?.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); criarEvento(); }
     });
     document.addEventListener('click', e => {
       const b = e.target.closest('[data-wa],[data-wa-win],[data-del],[data-edit],[data-day],[data-ev-open],[data-ev-pdf],[data-ev-del]');
