@@ -1,13 +1,13 @@
 {
- "id": "./index.html",
+ "id": "/",
  "name": "LeadStand – Captura de Leads",
  "short_name": "LeadStand",
  "description": "Captura de leads em eventos",
- "start_url": "./index.html",
- "scope": "./",
+ "start_url": "/",
+ "scope": "/",
  "display": "standalone",
  "orientation": "portrait",
- "background_color": "#E11D48",
+ "background_color": "#0B1120",
  "theme_color": "#E11D48",
  "lang": "pt-BR",
  "icons": [

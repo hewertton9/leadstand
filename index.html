@@ -635,6 +635,17 @@ Até mais!`
       toast('Evento excluído');
     }
 
+    async function entregarArquivo(blob, nome, mime, forcarDownload) {
+      if (/Android|iPhone|iPad/i.test(navigator.userAgent) && !forcarDownload && navigator.canShare) {
+        const file = new File([blob], nome, { type: mime });
+        if (navigator.canShare({ files: [file] })) {
+          try { await navigator.share({ files: [file], title: nome }); return; }
+          catch (e) { if (e.name === 'AbortError') return; }
+        }
+      }
+      entregarArquivo(blob, `leads_todos_eventos_${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv', forcar);
+    }
+
     function exportarPDF(id) {
       const ev = events.find(e => e.id === (id || currentEventId));
       if (!ev) { toast('Crie um evento primeiro'); return; }
@@ -681,7 +692,7 @@ Até mais!`
         doc.text(`Página ${i}/${n}`, W / 2, 290, { align: 'center' });
       }
       const slug = ev.nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w]+/g, '_').replace(/^_|_$/g, '');
-      doc.save(`leads_${slug}_${fmtBR(ymd(now)).replace(/\//g, '-')}.pdf`);
+      entregarArquivo(doc.output('blob'), `leads_${slug}_${fmtBR(ymd(now)).replace(/\//g, '-')}.pdf`, 'application/pdf');
     }
 
     // ================== ACTIONS ==================
@@ -869,7 +880,7 @@ Até mais!`
       return `"${t.replace(/"/g, '""')}"`;
     }
 
-    function exportarPlanilha() {
+    function exportarPlanilha(forcar) {
       if (!leads.length) { toast('Nenhum lead para exportar'); return; }
       const rows = [
         ['Evento', 'Data do evento', 'Nome', 'Telefone', 'Resultado', 'Valor', 'Cadastrado em', 'Ganhador'],
@@ -903,7 +914,7 @@ Até mais!`
 
     function limparTudo() {
       if (!confirm('Tem certeza? Todos os leads serão apagados (uma planilha de backup será baixada antes).')) return;
-      if (leads.length) exportarPlanilha();
+      if (leads.length) exportarPlanilha(true);
       leads = [];
       winners = [];
       events = [];
