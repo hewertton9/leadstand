@@ -97,7 +97,7 @@
         </svg>
         <span>Evento</span>
       </button>
-      <button onclick="showScreen('home')" aria-label="LeadStand – Início" class="justify-self-center flex items-center">
+      <button onclick="showScreen('home')" aria-label="LeadStand – Início" class="justify-self-center flex items-center gap-2">
         <span style="display:block;width:38px;height:38px;border-radius:11px;background:linear-gradient(145deg,#FB7185,#E11D48 55%,#BE123C);box-shadow:0 4px 12px rgba(225,29,72,.3)">
           <svg viewBox="0 0 64 64" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M12 32 L32 14 L52 32 M17 29 V50 H47 V29"/><g fill="#fff" stroke="none"><circle cx="32" cy="34" r="5"/><path d="M23 50 a9 9 0 0 1 18 0 Z"/></g></svg>
         </span>
@@ -814,24 +814,29 @@ Até mais!`
       const doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' });
       const W = 210, M = 15;
 
-      // Cabeçalho: evento e data à esquerda; logo da empresa à direita
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(15, 23, 42);
-      doc.text(ev.nome, M, 24);
-      doc.setFont('helvetica', 'normal'); doc.setFontSize(9.5); doc.setTextColor(100, 116, 139);
-      doc.text('Data do evento: ' + fmtBR(ev.data), M, 31);
-
+      // Cabeçalho: logo da empresa à esquerda; evento e data ao lado
       const empresaLogoUrl = await rasterizeDataUrl(config.logo, 180);
+      let textX = M;
       if (empresaLogoUrl) {
         try {
           const fmt = empresaLogoUrl.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG';
-          doc.addImage(empresaLogoUrl, fmt, W - M - 24, 14, 24, 24);
+          doc.addImage(empresaLogoUrl, fmt, M, 14, 20, 20);
+          textX = M + 24;
         } catch (e) {}
-      } else if (config.imob) {
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(71, 85, 105);
-        doc.text(config.imob, W - M, 24, { align: 'right' });
       }
 
-      doc.setDrawColor(226, 232, 240); doc.line(M, 42, W - M, 42);
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(15, 23, 42);
+      doc.text(ev.nome, textX, 21, { maxWidth: W - M - textX });
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(100, 116, 139);
+      const subLinha = [
+        'Data do evento: ' + fmtBR(ev.data),
+        (!empresaLogoUrl && config.imob) ? config.imob : ''
+      ].filter(Boolean).join(' · ');
+      doc.text(subLinha, textX, 28, { maxWidth: W - M - textX });
+
+      doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.35); doc.line(M, 38, W - M, 38);
+
+      // Balões de informações compactos
       const cards = [
         ['LEADS', String(list.length)],
         ['AGENDADOS', String(list.filter(l => l.resultado === 'Agendado').length)],
@@ -840,16 +845,28 @@ Até mais!`
         ['GERADO EM', fmtBR(ymd(now))],
         ['HORA', now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })]
       ];
-      const cw = (W - 2 * M - 8) / 3, ch = 22;
+      const cw = (W - 2 * M - 6) / 3, ch = 15.5, gap = 3, topCards = 43;
       cards.forEach((c, i) => {
-        const x = M + (i % 3) * (cw + 4), y = 50 + Math.floor(i / 3) * (ch + 4);
-        doc.setFillColor(241, 245, 249); doc.roundedRect(x, y, cw, ch, 2, 2, 'F');
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(100, 116, 139); doc.text(c[0], x + 5, y + 7);
-        doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(15, 23, 42); doc.text(c[1], x + 5, y + 16);
+        const x = M + (i % 3) * (cw + gap);
+        const y = topCards + Math.floor(i / 3) * (ch + gap);
+        doc.setFillColor(248, 250, 252);
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.25);
+        doc.roundedRect(x, y, cw, ch, 2, 2, 'FD');
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(6.5); doc.setTextColor(100, 116, 139);
+        doc.text(c[0], x + 4, y + 5.5);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(10.5); doc.setTextColor(15, 23, 42);
+        doc.text(c[1], x + 4, y + 12.2);
       });
-      doc.setFontSize(11); doc.text('Leads cadastrados', M, 108);
+
+      const tableStartY = topCards + 2 * ch + gap + 8;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(15, 23, 42);
+      doc.text('Leads cadastrados', M, tableStartY - 2.5);
+
       doc.autoTable({
-        startY: 112, margin: { left: M, right: M, bottom: 24 }, theme: 'plain',
+        startY: tableStartY,
+        margin: { left: M, right: M, bottom: 22 },
+        theme: 'plain',
         head: [['Nome', 'Telefone', 'Resultado', 'Valor']],
         body: list.map(l => [l.nome, l.telefone, l.resultado || 'Pendente', l.valor ? brl(l.valor) : '-']),
         styles: { fontSize: 8, cellPadding: 2.2, textColor: [15, 23, 42] },
@@ -861,16 +878,18 @@ Até mais!`
       const n = doc.internal.getNumberOfPages();
       for (let i = 1; i <= n; i++) {
         doc.setPage(i);
-        doc.setDrawColor(226, 232, 240); doc.line(M, 281, W - M, 281);
+        doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.3); doc.line(M, 281, W - M, 281);
+        let brandX = M;
         if (appLogoUrl) {
           try {
-            doc.addImage(appLogoUrl, 'PNG', M, 283.5, 6.5, 6.5);
+            doc.addImage(appLogoUrl, 'PNG', M, 283.5, 5.5, 5.5);
+            brandX = M + 7.2;
           } catch (e) {}
         }
-        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(100, 116, 139);
-        doc.text('Gerado pelo LeadStand', M + (appLogoUrl ? 8.5 : 0), 287.8);
-        doc.setTextColor(148, 163, 184);
-        doc.text(`Página ${i}/${n}`, W - M, 287.8, { align: 'right' });
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(8.5); doc.setTextColor(225, 29, 72);
+        doc.text('LeadStand', brandX, 287.3);
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(148, 163, 184);
+        doc.text(`Página ${i}/${n}`, W - M, 287.3, { align: 'right' });
       }
       const slug = ev.nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w]+/g, '_').replace(/^_|_$/g, '');
       entregarArquivo(doc.output('blob'), `leads_${slug}_${fmtBR(ymd(now)).replace(/\//g, '-')}.pdf`, 'application/pdf');
@@ -1211,3 +1230,6 @@ Até mais!`
   </script>
 </body>
 </html>
+```[cite: 1]
+
+Ficou como você queria no PDF? Se quiser ajustar mais alguma coisa, é só falar.
