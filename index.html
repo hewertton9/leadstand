@@ -118,7 +118,7 @@
             </label>
             <input type="file" id="onb-logo" accept="image/*" class="hidden" />
             <div id="onb-logo-preview-wrap" class="hidden shrink-0 items-center gap-2">
-              <img id="onb-logo-preview" alt="Prévia do logo" class="w-11 h-11 shrink-0 rounded-[12px] object-contain bg-white border border-slate-200 shadow-sm" />
+              <img id="onb-logo-preview" alt="Prévia do logo" class="w-auto max-w-[110px] h-11 shrink-0 rounded-lg object-contain" />
               <button type="button" onclick="limparLogoDraft('onb')" class="text-xs text-red-500 font-medium px-1.5 py-1">Remover</button>
             </div>
           </div>
@@ -333,7 +333,7 @@
               </label>
               <input type="file" id="cfg-logo" accept="image/*" class="hidden" />
               <div id="cfg-logo-preview-wrap" class="hidden shrink-0 items-center gap-2">
-                <img id="cfg-logo-preview" alt="Logo da empresa" class="w-11 h-11 shrink-0 rounded-[12px] object-contain bg-white border border-slate-200 shadow-sm" />
+                <img id="cfg-logo-preview" alt="Logo da empresa" class="w-auto max-w-[110px] h-11 shrink-0 rounded-lg object-contain" />
                 <button type="button" onclick="limparLogoDraft('cfg')" class="text-xs text-red-500 font-medium px-1.5 py-1">Remover</button>
               </div>
             </div>
@@ -522,67 +522,22 @@ Até mais!`
       setLogoPreview(prefix, '');
     }
 
-    function renderRoundedSquareLogo(img, size = 256, radiusRatio = 0.27, withBorder = false, paddingRatio = 0.1) {
+    function fitImageDataUrl(img, maxSide = 480) {
+      const iw = img.naturalWidth || img.width || maxSide;
+      const ih = img.naturalHeight || img.height || maxSide;
+      const scale = Math.min(1, maxSide / Math.max(iw, ih));
+      const w = Math.max(1, Math.round(iw * scale));
+      const h = Math.max(1, Math.round(ih * scale));
       const canvas = document.createElement('canvas');
-      canvas.width = size;
-      canvas.height = size;
+      canvas.width = w;
+      canvas.height = h;
       const ctx = canvas.getContext('2d');
-      const r = size * radiusRatio;
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(r, 0);
-      ctx.lineTo(size - r, 0);
-      ctx.quadraticCurveTo(size, 0, size, r);
-      ctx.lineTo(size, size - r);
-      ctx.quadraticCurveTo(size, size, size - r, size);
-      ctx.lineTo(r, size);
-      ctx.quadraticCurveTo(0, size, 0, size - r);
-      ctx.lineTo(0, r);
-      ctx.quadraticCurveTo(0, 0, r, 0);
-      ctx.closePath();
-      ctx.clip();
-
-      // Fundo branco garante aparência limpa mesmo em imagens com transparência
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, 0, size, size);
-
-      // Encaixe completo (contain) com margem interna para não cortar nenhuma parte da logo
-      const iw = img.naturalWidth || img.width || size;
-      const ih = img.naturalHeight || img.height || size;
-      const pad = size * paddingRatio;
-      const boxW = Math.max(1, size - pad * 2);
-      const boxH = Math.max(1, size - pad * 2);
-      const scale = Math.min(boxW / iw, boxH / ih);
-      const dw = iw * scale;
-      const dh = ih * scale;
-      const dx = (size - dw) / 2;
-      const dy = (size - dh) / 2;
-      ctx.drawImage(img, dx, dy, dw, dh);
-      ctx.restore();
-
-      if (withBorder) {
-        const inset = 1.5;
-        const ri = Math.max(0, r - inset);
-        ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(inset + ri, inset);
-        ctx.lineTo(size - inset - ri, inset);
-        ctx.quadraticCurveTo(size - inset, inset, size - inset, inset + ri);
-        ctx.lineTo(size - inset, size - inset - ri);
-        ctx.quadraticCurveTo(size - inset, size - inset, size - inset - ri, size - inset);
-        ctx.lineTo(inset + ri, size - inset);
-        ctx.quadraticCurveTo(inset, size - inset, inset, size - inset - ri);
-        ctx.lineTo(inset, inset + ri);
-        ctx.quadraticCurveTo(inset, inset, inset + ri, inset);
-        ctx.closePath();
-        ctx.strokeStyle = 'rgba(15, 23, 42, 0.14)';
-        ctx.lineWidth = 3;
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      return canvas.toDataURL('image/png');
+      ctx.drawImage(img, 0, 0, w, h);
+      return {
+        dataUrl: canvas.toDataURL('image/png'),
+        width: w,
+        height: h
+      };
     }
 
     function lerImagemLogo(file, prefix) {
@@ -595,8 +550,8 @@ Até mais!`
       reader.onload = () => {
         const img = new Image();
         img.onload = () => {
-          const outUrl = renderRoundedSquareLogo(img, 256, 0.27, false, 0.1);
-          setLogoPreview(prefix, outUrl);
+          const { dataUrl } = fitImageDataUrl(img, 480);
+          setLogoPreview(prefix, dataUrl);
         };
         img.onerror = () => toast('Não foi possível carregar a imagem');
         img.src = reader.result;
@@ -627,13 +582,23 @@ Até mais!`
       });
     }
 
-    function rasterizeRoundedLogo(dataUrl, size = 240) {
+    function preparePdfLogo(dataUrl, maxW = 42, maxH = 18) {
       return new Promise(resolve => {
         if (!dataUrl) { resolve(null); return; }
         const img = new Image();
         img.onload = () => {
           try {
-            resolve(renderRoundedSquareLogo(img, size, 0.27, true, 0.1));
+            const iw = img.naturalWidth || img.width || 1;
+            const ih = img.naturalHeight || img.height || 1;
+            const ratio = iw / ih;
+            let w = maxW;
+            let h = w / ratio;
+            if (h > maxH) {
+              h = maxH;
+              w = h * ratio;
+            }
+            const fitted = fitImageDataUrl(img, 480);
+            resolve({ dataUrl: fitted.dataUrl, w, h });
           } catch (e) {
             resolve(null);
           }
@@ -878,16 +843,15 @@ Até mais!`
       const doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' });
       const W = 210, M = 15;
 
-      // Cabeçalho: com logo arredondada à esquerda; sem logo, empresa acima do evento quando informada
-      const empresaLogoUrl = await rasterizeRoundedLogo(config.logo, 240);
+      // Cabeçalho: logo adaptada à proporção real à esquerda; sem logo, empresa acima do evento quando informada
+      const pdfLogo = await preparePdfLogo(config.logo, 42, 18);
       const nomeEmpresa = (config.imob || '').trim();
-      if (empresaLogoUrl) {
-        const logoSize = 18;
-        const logoY = 15;
+      if (pdfLogo) {
+        const logoY = 15 + (18 - pdfLogo.h) / 2;
         let textX = M;
         try {
-          doc.addImage(empresaLogoUrl, 'PNG', M, logoY, logoSize, logoSize);
-          textX = M + logoSize + 4;
+          doc.addImage(pdfLogo.dataUrl, 'PNG', M, logoY, pdfLogo.w, pdfLogo.h);
+          textX = M + pdfLogo.w + 4;
         } catch (e) {}
 
         doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(15, 23, 42);
