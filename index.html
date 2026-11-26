@@ -5,8 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LeadStand – Captura de Leads</title>
   <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="LeadStand" />
   <meta name="theme-color" content="#E11D48" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <script>
     tailwind.config = {
       theme: {
@@ -30,9 +37,34 @@
     .fade-in { animation: fadeIn 0.3s ease; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
     input:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px rgba(225,29,72,0.15); }
+  
+    /* ===== Splash / intro ===== */
+    #splash{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(160deg,#F43F5E 0%,#E11D48 45%,#9F1239 100%);color:#fff;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;text-align:center;padding:24px;transition:opacity .5s ease,transform .5s ease}
+    #splash.out{opacity:0;transform:scale(1.04);pointer-events:none}
+    .sp-logo{position:relative;width:96px;height:96px;border-radius:26px;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 20px 50px rgba(0,0,0,.25);animation:spPop .7s cubic-bezier(.2,1.4,.4,1) both}
+    .sp-logo span{font-size:56px;font-weight:800;color:#E11D48;line-height:1}
+    .sp-logo::after{content:'';position:absolute;inset:-8px;border-radius:32px;border:2px solid rgba(255,255,255,.55);animation:spRing 1.6s ease-out .5s infinite}
+    .sp-title{margin:28px 0 6px;font-size:32px;font-weight:800;letter-spacing:-.02em;animation:spUp .6s ease .35s both}
+    .sp-tag{margin:0;font-size:15px;opacity:.9;animation:spUp .6s ease .5s both}
+    .sp-sub{margin:18px 0 0;font-size:13px;opacity:.75;min-height:1em;animation:spUp .6s ease .7s both}
+    .sp-bar{position:absolute;bottom:max(48px,env(safe-area-inset-bottom));width:120px;height:3px;border-radius:3px;background:rgba(255,255,255,.25);overflow:hidden}
+    .sp-bar i{display:block;height:100%;background:#fff;transform-origin:left;animation:spBar 2s ease-in-out .2s both}
+    @keyframes spPop{from{opacity:0;transform:scale(.4) rotate(-12deg)}to{opacity:1;transform:none}}
+    @keyframes spUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+    @keyframes spRing{0%{opacity:.8;transform:scale(.95)}100%{opacity:0;transform:scale(1.35)}}
+    @keyframes spBar{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+    @media (prefers-reduced-motion:reduce){#splash *,#splash *::after{animation:none!important}}
   </style>
 </head>
 <body class="bg-slate-50 text-slate-800 min-h-screen">
+  <div id="splash" aria-hidden="true">
+    <div class="sp-logo"><span>L</span></div>
+    <h1 class="sp-title">LeadStand</h1>
+    <p class="sp-tag">Capture contatos. Feche mais negócios.</p>
+    <p class="sp-sub" id="splash-sub"></p>
+    <div class="sp-bar"><i></i></div>
+  </div>
+  <script>try{if(sessionStorage.getItem('ls_splash')){document.getElementById('splash').remove();}}catch(e){}</script>
 
   <!-- ========== HEADER ========== -->
   <header class="bg-white border-b border-slate-100 sticky top-0 z-40">
@@ -54,17 +86,22 @@
     <section id="screen-home" class="fade-in">
       <div class="mb-5">
         <p class="text-slate-500 text-sm" id="greeting">Bom dia!</p>
-        <h2 class="text-2xl font-bold text-slate-900" id="event-name">Stand Royal Prestige</h2>
+        <h2 class="text-2xl font-bold text-slate-900" id="event-name">Nenhum evento</h2>
+        <p class="text-sm text-slate-500" id="event-date"></p>
       </div>
 
+      <div id="today-banner" class="hidden mb-4 bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between gap-3">
+        <p class="text-sm text-amber-800">Hoje ainda não tem evento.</p>
+        <button onclick="showScreen('eventos')" class="text-sm font-semibold bg-amber-500 text-white px-3 py-2 rounded-xl shrink-0">Criar evento</button>
+      </div>
       <!-- Stats -->
       <div class="grid grid-cols-2 gap-3 mb-5">
         <div class="bg-white rounded-2xl p-4 card">
-          <p class="text-xs text-slate-500 mb-1">Leads hoje</p>
+          <p class="text-xs text-slate-500 mb-1">Leads do evento</p>
           <p class="text-3xl font-bold text-primary" id="stat-today">0</p>
         </div>
         <div class="bg-white rounded-2xl p-4 card">
-          <p class="text-xs text-slate-500 mb-1">Total capturados</p>
+          <p class="text-xs text-slate-500 mb-1">Total geral</p>
           <p class="text-3xl font-bold text-slate-800" id="stat-total">0</p>
         </div>
       </div>
@@ -79,9 +116,9 @@
           <svg class="w-7 h-7 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>
           <span class="text-xs font-semibold text-slate-700">Sorteio</span>
         </button>
-        <button onclick="exportarPlanilha()" class="bg-white rounded-2xl p-4 flex flex-col items-center gap-2 card border border-slate-100">
+        <button onclick="exportarPDF()" class="bg-white rounded-2xl p-4 flex flex-col items-center gap-2 card border border-slate-100">
           <svg class="w-7 h-7 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
-          <span class="text-xs font-semibold text-slate-700">Planilha</span>
+          <span class="text-xs font-semibold text-slate-700">PDF</span>
         </button>
       </div>
 
@@ -104,6 +141,7 @@
           ← Voltar
         </button>
         <h2 class="text-2xl font-bold" id="novo-title">Novo Lead</h2>
+        <p id="novo-evento" class="text-sm mt-1"></p>
       </div>
 
       <div class="bg-white rounded-2xl p-5 card space-y-4">
@@ -115,7 +153,12 @@
           <label for="input-telefone" class="block text-sm font-medium text-slate-700 mb-1.5">Telefone (WhatsApp)</label>
           <input type="tel" id="input-telefone" placeholder="(43) 99999-9999" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-base" inputmode="numeric" autocomplete="tel" />
         </div>
-
+        <div id="edit-extra" class="hidden"><div class="grid grid-cols-2 gap-3">
+          <div><label for="input-resultado" class="block text-sm font-medium text-slate-700 mb-1.5">Resultado</label>
+            <select id="input-resultado" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-base"><option>Pendente</option><option>Agendado</option><option>Venda</option></select></div>
+          <div><label for="input-valor" class="block text-sm font-medium text-slate-700 mb-1.5">Valor (R$)</label>
+            <input id="input-valor" type="text" inputmode="decimal" placeholder="0,00" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-base" /></div>
+        </div></div>
         <div class="flex items-center justify-between py-2">
           <span class="text-sm font-medium text-slate-700">Abrir WhatsApp ao salvar</span>
           <label class="relative inline-flex items-center cursor-pointer">
@@ -140,9 +183,10 @@
       <div class="mb-4 flex items-center justify-between">
         <div>
           <button onclick="showScreen('home')" class="text-sm text-slate-500 mb-1 flex items-center gap-1">← Voltar</button>
-          <h2 class="text-2xl font-bold">Todos os Leads</h2>
+          <h2 class="text-2xl font-bold">Leads</h2>
+          <p id="leads-evento" class="text-sm text-slate-500"></p>
         </div>
-        <span class="bg-primary/10 text-primary text-sm font-semibold px-3 py-1 rounded-full" id="leads-count">0</span>
+        <div class="flex items-center gap-2"><button onclick="exportarPDF()" class="text-sm font-medium bg-slate-900 text-white px-3 py-1 rounded-full">📄 PDF</button><span class="bg-primary/10 text-primary text-sm font-semibold px-3 py-1 rounded-full" id="leads-count">0</span></div>
       </div>
 
       <div class="mb-4">
@@ -151,6 +195,29 @@
 
       <div id="leads-list" class="space-y-2">
         <!-- filled by JS -->
+      </div>
+    </section>
+
+    <!-- ===== EVENTOS / CALENDÁRIO ===== -->
+    <section id="screen-eventos" class="hidden fade-in">
+      <div class="mb-4"><h2 class="text-2xl font-bold">Eventos</h2><p class="text-sm text-slate-500">Toque num dia para ver ou criar o evento</p></div>
+      <div class="bg-white rounded-2xl p-4 card mb-4">
+        <div class="flex items-center justify-between mb-3">
+          <button onclick="mudarMes(-1)" aria-label="Mês anterior" class="w-9 h-9 rounded-full bg-slate-100 text-lg">‹</button>
+          <p id="cal-title" class="font-semibold capitalize"></p>
+          <button onclick="mudarMes(1)" aria-label="Próximo mês" class="w-9 h-9 rounded-full bg-slate-100 text-lg">›</button>
+        </div>
+        <div class="grid grid-cols-7 text-center text-xs text-slate-400 mb-1"><span>D</span><span>S</span><span>T</span><span>Q</span><span>Q</span><span>S</span><span>S</span></div>
+        <div id="cal-grid" class="grid grid-cols-7 gap-1"></div>
+      </div>
+      <div class="bg-white rounded-2xl p-4 card">
+        <p class="font-semibold mb-3" id="dia-titulo"></p>
+        <div id="dia-eventos" class="space-y-2 mb-4"></div>
+        <div class="border-t border-slate-100 pt-4 space-y-3">
+          <p class="text-sm font-medium text-slate-700">Novo evento neste dia</p>
+          <input id="ev-nome" type="text" aria-label="Nome do evento" placeholder="Nome do evento" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-base" />
+          <button onclick="criarEvento()" class="btn-primary w-full text-white font-semibold py-3 rounded-xl">+ Criar evento</button>
+        </div>
       </div>
     </section>
 
@@ -200,7 +267,7 @@
             <input type="text" id="cfg-nome" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50" placeholder="Seu nome" />
           </div>
           <div>
-            <label for="cfg-evento" class="block text-sm font-medium text-slate-700 mb-1.5">Nome do evento / stand</label>
+            <label for="cfg-evento" class="block text-sm font-medium text-slate-700 mb-1.5">Nome padrão do evento</label>
             <input type="text" id="cfg-evento" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50" placeholder="Ex: Royal Prestige" />
           </div>
           <div>
@@ -246,6 +313,10 @@
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
         <span class="text-[10px] font-medium">Leads</span>
       </button>
+      <button onclick="showScreen('eventos')" class="nav-btn flex flex-col items-center gap-0.5 px-3 py-1.5 text-slate-400" data-screen="eventos">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3M4 11h16M5 5h14a1 1 0 011 1v13a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1z"/></svg>
+        <span class="text-[10px] font-medium">Eventos</span>
+      </button>
       <button onclick="showScreen('sorteio')" class="nav-btn flex flex-col items-center gap-0.5 px-3 py-1.5 text-slate-400" data-screen="sorteio">
         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7"/></svg>
         <span class="text-[10px] font-medium">Sorteio</span>
@@ -265,6 +336,9 @@
     if (!Array.isArray(leads)) leads = [];
     let winners = load('leadstand_winners', []);
     if (!Array.isArray(winners)) winners = [];
+    let events = load('leadstand_events', []);
+    if (!Array.isArray(events)) events = [];
+    let currentEventId = load('leadstand_current', null);
     let config = load('leadstand_config', {});
     if (!config || typeof config !== 'object' || Array.isArray(config)) config = {};
 
@@ -285,12 +359,29 @@ Até mais!`
 
     config = { ...defaultConfig, ...config };
 
+    // migração: leads antigos viram eventos (um por dia)
+    leads.forEach(l => {
+      if (!l.eventId) {
+        const day = ymd(new Date(l.createdAt));
+        if (!events.some(e => e.id === 'm' + day)) events.push({ id: 'm' + day, nome: config.evento, data: day });
+        l.eventId = 'm' + day;
+      }
+      if (!l.resultado) l.resultado = 'Pendente';
+    });
+    if (!events.some(e => e.id === currentEventId)) {
+      const t = events.find(e => e.data === ymd(new Date()));
+      currentEventId = (t || [...events].sort((a, b) => b.data.localeCompare(a.data))[0] || {}).id || null;
+    }
+    save();
+
     // ================== UTILS ==================
     function save() {
       try {
         localStorage.setItem('leadstand_leads', JSON.stringify(leads));
         localStorage.setItem('leadstand_config', JSON.stringify(config));
         localStorage.setItem('leadstand_winners', JSON.stringify(winners));
+        localStorage.setItem('leadstand_events', JSON.stringify(events));
+        localStorage.setItem('leadstand_current', JSON.stringify(currentEventId));
         return true;
       } catch (e) {
         toast('⚠️ Não foi possível salvar neste aparelho! Exporte a planilha agora.');
@@ -321,7 +412,7 @@ Até mais!`
     }
 
     function fill(tpl, nome) {
-      const map = { Nome: nome, SeuNome: config.nome, Imob: config.imob, Evento: config.evento };
+      const map = { Nome: nome, SeuNome: config.nome, Imob: config.imob, Evento: (curEvent() || {}).nome || config.evento };
       return tpl.replace(/\[(Nome|SeuNome|Imob|Evento)\]/g, (_, k) => map[k]);
     }
 
@@ -344,14 +435,15 @@ Até mais!`
 
     // ================== RENDER ==================
     function updateStats() {
-      const today = leads.filter(l => isToday(l.createdAt)).length;
-      document.getElementById('stat-today').textContent = today;
+      const n = evLeads().length;
+      document.getElementById('stat-today').textContent = n;
       document.getElementById('stat-total').textContent = leads.length;
-      document.getElementById('leads-count').textContent = leads.length;
-      document.getElementById('part-count').textContent = leads.length;
+      document.getElementById('leads-count').textContent = n;
+      document.getElementById('part-count').textContent = n;
     }
 
     function renderRecent() {
+      const leads = evLeads();
       const el = document.getElementById('recent-list');
       const recent = [...leads].reverse().slice(0, 5);
       if (!recent.length) {
@@ -372,7 +464,9 @@ Até mais!`
     }
 
     function renderLeads() {
+      const leads = evLeads();
       const q = (document.getElementById('search-leads')?.value || '').toLowerCase();
+      document.getElementById('leads-evento').textContent = curEvent() ? curEvent().nome + ' · ' + fmtBR(curEvent().data) : 'Nenhum evento selecionado';
       const filtered = leads.filter(l => 
         l.nome.toLowerCase().includes(q) || l.telefone.includes(q) || (onlyNumbers(q) && onlyNumbers(l.telefone).includes(onlyNumbers(q)))
       ).reverse();
@@ -387,7 +481,7 @@ Até mais!`
           <div class="flex-1 min-w-0">
             <p class="font-medium text-slate-800 truncate">${esc(l.nome)}</p>
             <p class="text-sm text-slate-500">${esc(l.telefone)}</p>
-            <p class="text-xs text-slate-400 mt-0.5">${new Date(l.createdAt).toLocaleString('pt-BR')}</p>
+            <p class="text-xs text-slate-400 mt-0.5">${new Date(l.createdAt).toLocaleString('pt-BR')} · <span class="font-medium ${l.resultado === 'Venda' ? 'text-green-600' : l.resultado === 'Agendado' ? 'text-amber-600' : ''}">${esc(l.resultado || 'Pendente')}</span>${l.valor ? ' · ' + brl(l.valor) : ''}</p>
           </div>
           <div class="flex items-center gap-2 ml-3">
             <button data-wa="${l.id}" aria-label="Abrir WhatsApp" class="w-10 h-10 rounded-full bg-green-50 text-green-600 flex items-center justify-center">
@@ -403,6 +497,7 @@ Até mais!`
     }
 
     function renderParticipantes() {
+      const leads = evLeads();
       const el = document.getElementById('participantes-list');
       if (!leads.length) {
         el.innerHTML = `<div class="px-4 py-6 text-center text-slate-400">Nenhum participante</div>`;
@@ -428,19 +523,146 @@ Até mais!`
       document.getElementById('cfg-imob').value = config.imob;
       document.getElementById('cfg-mensagem').value = config.mensagem;
       document.getElementById('cfg-msg-ganhador').value = config.msgGanhador;
-      document.getElementById('event-name').textContent = config.evento;
+      document.getElementById('event-name').textContent = curEvent() ? curEvent().nome : 'Nenhum evento';
+      document.getElementById('event-date').textContent = curEvent() ? fmtBR(curEvent().data) : '';
+      document.getElementById('today-banner').classList.toggle('hidden', events.some(e => e.data === ymd(new Date())));
       document.getElementById('greeting').textContent = `${getGreeting()}${config.nome && config.nome !== 'Você' ? ', ' + config.nome : ''}!`;
-      document.getElementById('header-sub').textContent = config.evento;
+      document.getElementById('header-sub').textContent = curEvent() ? curEvent().nome : 'Captura de Leads';
+    }
+
+    // ================== EVENTOS ==================
+    function ymd(d) { return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+    function fmtBR(iso) { const [y, m, d] = iso.split('-'); return `${d}/${m}/${y}`; }
+    function curEvent() { return events.find(e => e.id === currentEventId) || null; }
+    function evLeads() { return leads.filter(l => l.eventId === currentEventId); }
+    function brl(n) { return 'R$ ' + Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function parseValor(v) { v = String(v).trim(); if (!v) return 0; if (v.includes(',')) v = v.replace(/\./g, '').replace(',', '.'); return parseFloat(v) || 0; }
+
+    let calSel = ymd(new Date());
+    let calMonth = new Date();
+
+    function renderNovoEvento() {
+      const e = curEvent(), p = document.getElementById('novo-evento');
+      if (!e) { p.textContent = '⚠️ Nenhum evento. Crie um na aba Eventos.'; p.className = 'text-sm mt-1 text-red-600'; return; }
+      const hoje = e.data === ymd(new Date());
+      p.textContent = `Evento: ${e.nome} · ${fmtBR(e.data)}${hoje ? '' : ' (não é hoje!)'}`;
+      p.className = 'text-sm mt-1 ' + (hoje ? 'text-slate-500' : 'text-amber-600 font-medium');
+    }
+
+    function mudarMes(n) { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + n, 1); renderCalendario(); }
+
+    function renderCalendario() {
+      const first = new Date(calMonth.getFullYear(), calMonth.getMonth(), 1);
+      const days = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
+      const today = ymd(new Date());
+      document.getElementById('cal-title').textContent = first.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+      let html = '<span></span>'.repeat(first.getDay());
+      for (let d = 1; d <= days; d++) {
+        const iso = ymd(new Date(first.getFullYear(), first.getMonth(), d));
+        const sel = iso === calSel, has = events.some(e => e.data === iso);
+        html += `<button data-day="${iso}" class="h-10 rounded-xl text-sm relative ${sel ? 'btn-primary text-white font-semibold' : iso === today ? 'bg-slate-100 font-semibold' : ''}">${d}${has ? `<span class="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full ${sel ? 'bg-white' : 'bg-primary'}"></span>` : ''}</button>`;
+      }
+      document.getElementById('cal-grid').innerHTML = html;
+      document.getElementById('dia-titulo').textContent = (calSel === today ? 'Hoje · ' : '') + fmtBR(calSel);
+      const evs = events.filter(e => e.data === calSel);
+      document.getElementById('dia-eventos').innerHTML = evs.length ? evs.map(e => {
+        const n = leads.filter(l => l.eventId === e.id).length;
+        return `<div class="border border-slate-100 rounded-xl p-3 flex items-center justify-between gap-2">
+          <div class="min-w-0"><p class="font-medium truncate">${esc(e.nome)}</p><p class="text-xs text-slate-500">${n} leads${e.id === currentEventId ? ' · evento atual' : ''}</p></div>
+          <div class="flex gap-2 shrink-0">
+            <button data-ev-open="${e.id}" class="text-sm font-medium bg-primary/10 text-primary px-3 py-1.5 rounded-lg">Abrir</button>
+            <button data-ev-pdf="${e.id}" aria-label="Baixar PDF" class="text-sm bg-slate-100 px-3 py-1.5 rounded-lg">📄</button>
+            <button data-ev-del="${e.id}" aria-label="Excluir evento" class="text-sm bg-red-50 px-3 py-1.5 rounded-lg">🗑</button>
+          </div></div>`;
+      }).join('') : '<p class="text-sm text-slate-400">Nenhum evento neste dia</p>';
+    }
+
+    function selecionarDia(iso) { calSel = iso; renderCalendario(); }
+
+    function criarEvento() {
+      const inp = document.getElementById('ev-nome');
+      const ev = { id: Date.now().toString(), nome: inp.value.trim() || config.evento, data: calSel };
+      events.push(ev);
+      currentEventId = ev.id;
+      save();
+      inp.value = '';
+      toast('Evento criado! Pode cadastrar os leads.');
+      showScreen('novo');
+    }
+
+    function abrirEvento(id) { currentEventId = id; save(); showScreen('leads'); }
+
+    function excluirEvento(id) {
+      const e = events.find(x => x.id === id);
+      if (!e) return;
+      const ids = leads.filter(l => l.eventId === id).map(l => l.id);
+      if (!confirm(`Excluir "${e.nome}" e os ${ids.length} leads dele? Baixe o PDF antes se precisar.`)) return;
+      leads = leads.filter(l => l.eventId !== id);
+      winners = winners.filter(w => !ids.includes(w));
+      events = events.filter(x => x.id !== id);
+      if (currentEventId === id) currentEventId = ([...events].sort((a, b) => b.data.localeCompare(a.data))[0] || {}).id || null;
+      save();
+      renderCalendario();
+      toast('Evento excluído');
+    }
+
+    function exportarPDF(id) {
+      const ev = events.find(e => e.id === (id || currentEventId));
+      if (!ev) { toast('Crie um evento primeiro'); return; }
+      if (!window.jspdf) { toast('PDF indisponível: abra o app com internet uma vez'); return; }
+      const list = leads.filter(l => l.eventId === ev.id).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR', { sensitivity: 'base' }));
+      const vendas = list.filter(l => l.resultado === 'Venda');
+      const now = new Date();
+      const doc = new window.jspdf.jsPDF({ unit: 'mm', format: 'a4' });
+      const W = 210, M = 15;
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(20); doc.setTextColor(99, 102, 241);
+      doc.text('Leads do Stand', W - M, 22, { align: 'right' });
+      doc.setFontSize(12); doc.setTextColor(15, 23, 42);
+      doc.text(ev.nome, W - M, 30, { align: 'right' });
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(100, 116, 139);
+      doc.text('Data do evento: ' + fmtBR(ev.data), W - M, 36, { align: 'right' });
+      doc.setDrawColor(226, 232, 240); doc.line(M, 42, W - M, 42);
+      const cards = [
+        ['LEADS', String(list.length)],
+        ['AGENDADOS', String(list.filter(l => l.resultado === 'Agendado').length)],
+        ['VENDAS', String(vendas.length)],
+        ['VALOR TOTAL', brl(vendas.reduce((t, l) => t + (l.valor || 0), 0))],
+        ['GERADO EM', fmtBR(ymd(now))],
+        ['HORA', now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })]
+      ];
+      const cw = (W - 2 * M - 8) / 3, ch = 22;
+      cards.forEach((c, i) => {
+        const x = M + (i % 3) * (cw + 4), y = 50 + Math.floor(i / 3) * (ch + 4);
+        doc.setFillColor(241, 245, 249); doc.roundedRect(x, y, cw, ch, 2, 2, 'F');
+        doc.setFont('helvetica', 'normal'); doc.setFontSize(7); doc.setTextColor(100, 116, 139); doc.text(c[0], x + 5, y + 7);
+        doc.setFont('helvetica', 'bold'); doc.setFontSize(13); doc.setTextColor(15, 23, 42); doc.text(c[1], x + 5, y + 16);
+      });
+      doc.setFontSize(11); doc.text('Leads cadastrados', M, 108);
+      doc.autoTable({
+        startY: 112, margin: { left: M, right: M, bottom: 18 }, theme: 'plain',
+        head: [['Nome', 'Telefone', 'Resultado', 'Valor']],
+        body: list.map(l => [l.nome, l.telefone, l.resultado || 'Pendente', l.valor ? brl(l.valor) : '-']),
+        styles: { fontSize: 8, cellPadding: 2.2, textColor: [15, 23, 42] },
+        headStyles: { fillColor: [241, 245, 249], textColor: [71, 85, 105], fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [248, 250, 252] }
+      });
+      const n = doc.internal.getNumberOfPages();
+      for (let i = 1; i <= n; i++) {
+        doc.setPage(i); doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(148, 163, 184);
+        doc.text(`Página ${i}/${n}`, W / 2, 290, { align: 'center' });
+      }
+      const slug = ev.nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w]+/g, '_').replace(/^_|_$/g, '');
+      doc.save(`leads_${slug}_${fmtBR(ymd(now)).replace(/\//g, '-')}.pdf`);
     }
 
     // ================== ACTIONS ==================
-    const SCREENS = ['home','novo','leads','sorteio','config'];
+    const SCREENS = ['home','novo','leads','eventos','sorteio','config'];
     function showScreen(name, fromPop) {
       if (!SCREENS.includes(name)) name = 'home';
       if (sorteioTimer) { clearInterval(sorteioTimer); sorteioTimer = null; }
       if (!fromPop && location.hash !== '#' + name) history.pushState(null, '', '#' + name);
       window.scrollTo(0, 0);
-      ['home','novo','leads','sorteio','config'].forEach(s => {
+      SCREENS.forEach(s => {
         document.getElementById(`screen-${s}`).classList.add('hidden');
       });
       document.getElementById(`screen-${name}`).classList.remove('hidden');
@@ -457,6 +679,7 @@ Até mais!`
       });
 
       if (name === 'leads') renderLeads();
+      if (name === 'eventos') { calSel = ymd(new Date()); calMonth = new Date(); renderCalendario(); }
       if (name === 'sorteio') { renderParticipantes(); resetSorteioUI(); }
       if (name === 'novo') {
         document.getElementById('input-nome').value = '';
@@ -464,6 +687,8 @@ Até mais!`
         updatePreview();
         editingId = null;
         document.getElementById('novo-title').textContent = 'Novo Lead';
+        document.getElementById('edit-extra').classList.add('hidden');
+        renderNovoEvento();
         updateSaveLabel();
         setTimeout(() => document.getElementById('input-nome').focus(), 100);
       }
@@ -486,19 +711,20 @@ Até mais!`
       const nome = document.getElementById('input-nome').value.trim();
       let telefone = document.getElementById('input-telefone').value.trim();
       const openWA = document.getElementById('toggle-whatsapp').checked;
+      if (!curEvent()) { toast('Crie um evento primeiro'); showScreen('eventos'); return; }
 
       if (!nome) { toast('Digite o nome'); return; }
       if (onlyNumbers(telefone).length < 10) { toast('Telefone inválido'); return; }
       telefone = formatPhone(onlyNumbers(telefone));
 
-      const dup = leads.find(l => l.telefone === telefone && l.id !== editingId);
+      const dup = leads.find(l => l.telefone === telefone && l.id !== editingId && l.eventId === currentEventId);
       if (dup && !confirm(`Esse telefone já está cadastrado (${dup.nome}). Salvar mesmo assim?`)) return;
 
       const wasEditing = !!editingId;
       let lead = wasEditing ? leads.find(l => l.id === editingId) : null;
-      if (lead) { lead.nome = nome; lead.telefone = telefone; }
+      if (lead) { lead.nome = nome; lead.telefone = telefone; lead.resultado = document.getElementById('input-resultado').value; lead.valor = parseValor(document.getElementById('input-valor').value); }
       else {
-        lead = { id: Date.now().toString(), nome, telefone, createdAt: new Date().toISOString() };
+        lead = { id: Date.now().toString(), nome, telefone, createdAt: new Date().toISOString(), eventId: currentEventId, resultado: 'Pendente', valor: 0 };
         leads.push(lead);
       }
       const ok = save();
@@ -535,6 +761,9 @@ Até mais!`
       document.getElementById('input-nome').value = l.nome;
       document.getElementById('input-telefone').value = l.telefone;
       document.getElementById('novo-title').textContent = 'Editar Lead';
+      document.getElementById('edit-extra').classList.remove('hidden');
+      document.getElementById('input-resultado').value = l.resultado || 'Pendente';
+      document.getElementById('input-valor').value = l.valor ? String(l.valor).replace('.', ',') : '';
       updatePreview();
       updateSaveLabel();
     }
@@ -553,7 +782,7 @@ Até mais!`
     let sorteioTimer = null;
 
     function renderWinners() {
-      const w = winners.map(id => leads.find(l => l.id === id)).filter(Boolean);
+      const w = winners.map(id => leads.find(l => l.id === id)).filter(l => l && l.eventId === currentEventId);
       document.getElementById('winners-box').innerHTML = w.length
         ? `<p class="font-medium text-slate-700 mb-1">Ganhadores (${w.length})</p>` + w.map(l => `<p>${esc(l.nome)}</p>`).join('') +
           `<button onclick="zerarGanhadores()" class="mt-2 text-primary font-medium">Zerar ganhadores</button>`
@@ -561,6 +790,7 @@ Até mais!`
     }
 
     function resetSorteioUI() {
+      const leads = evLeads();
       const pool = leads.filter(l => !winners.includes(l.id));
       const status = !leads.length ? 'Cadastre leads primeiro' : !pool.length ? 'Todos os leads já foram sorteados' : `Pronto para sortear (${pool.length} concorrendo)`;
       document.getElementById('sorteio-result').innerHTML = `<div class="w-20 h-20 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center text-4xl">🎁</div><p class="text-slate-500" id="sorteio-status">${status}</p>`;
@@ -570,12 +800,14 @@ Até mais!`
 
     function zerarGanhadores() {
       if (!confirm('Zerar a lista de ganhadores? Todos voltam a concorrer.')) return;
-      winners = [];
+      const ids = evLeads().map(l => l.id);
+      winners = winners.filter(w => !ids.includes(w));
       save();
       resetSorteioUI();
     }
 
     function realizarSorteio() {
+      const leads = evLeads();
       const pool = leads.filter(l => !winners.includes(l.id));
       if (!pool.length || sorteioTimer) return;
       const btn = document.getElementById('btn-sortear');
@@ -610,8 +842,8 @@ Até mais!`
     function exportarPlanilha() {
       if (!leads.length) { toast('Nenhum lead para exportar'); return; }
       const rows = [
-        ['Nome', 'Telefone', 'Data/Hora', 'Ganhador'],
-        ...leads.map(l => [l.nome, l.telefone, new Date(l.createdAt).toLocaleString('pt-BR'), winners.includes(l.id) ? 'Sim' : ''])
+        ['Evento', 'Data do evento', 'Nome', 'Telefone', 'Resultado', 'Valor', 'Cadastrado em', 'Ganhador'],
+        ...leads.map(l => { const e = events.find(x => x.id === l.eventId) || {}; return [e.nome || '', e.data ? fmtBR(e.data) : '', l.nome, l.telefone, l.resultado || 'Pendente', l.valor ? brl(l.valor) : '', new Date(l.createdAt).toLocaleString('pt-BR'), winners.includes(l.id) ? 'Sim' : '']; })
       ];
       const csv = rows.map(r => r.map(csvCell).join(';')).join('\n');
       const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
@@ -645,6 +877,8 @@ Até mais!`
       if (leads.length) exportarPlanilha();
       leads = [];
       winners = [];
+      events = [];
+      currentEventId = null;
       save();
       updateStats();
       renderRecent();
@@ -666,17 +900,35 @@ Até mais!`
     tgl.checked = config.autoWA !== false;
     tgl.addEventListener('change', () => { config.autoWA = tgl.checked; save(); updateSaveLabel(); });
     document.addEventListener('click', e => {
-      const b = e.target.closest('[data-wa],[data-wa-win],[data-del],[data-edit]');
+      const b = e.target.closest('[data-wa],[data-wa-win],[data-del],[data-edit],[data-day],[data-ev-open],[data-ev-pdf],[data-ev-del]');
       if (!b) return;
       const d = b.dataset;
       if (d.wa) enviarLead(d.wa, 'lead');
       else if (d.waWin) enviarLead(d.waWin, 'ganhador');
       else if (d.del) excluirLead(d.del);
       else if (d.edit) editarLead(d.edit);
+      else if (d.day) selecionarDia(d.day);
+      else if (d.evOpen) abrirEvento(d.evOpen);
+      else if (d.evPdf) exportarPDF(d.evPdf);
+      else if (d.evDel) excluirEvento(d.evDel);
     });
     window.addEventListener('popstate', () => showScreen(location.hash.slice(1) || 'home', true));
     if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
-    showScreen(location.hash.slice(1) || 'home', true);
+    showScreen(location.hash.slice(1) || (events.length ? 'home' : 'eventos'), true);
+
+    // ===== intro =====
+    (function () {
+      const el = document.getElementById('splash');
+      if (!el) return;
+      try { sessionStorage.setItem('ls_splash', '1'); } catch (e) {}
+      const ev = curEvent();
+      document.getElementById('splash-sub').textContent = getGreeting() + (ev ? ' · ' + ev.nome : '');
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      let done = false;
+      const close = () => { if (done) return; done = true; el.classList.add('out'); setTimeout(() => el.remove(), 500); };
+      el.addEventListener('click', close);
+      setTimeout(close, reduce ? 900 : 2200);
+    })();
   </script>
 </body>
 </html>
