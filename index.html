@@ -89,12 +89,14 @@
 
   <!-- ========== HEADER ========== -->
   <header class="bg-white border-b border-slate-100 sticky top-0 z-40">
-    <div class="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
-      <div>
-        <h1 class="text-lg font-bold text-slate-900">LeadStand</h1>
-        <p class="text-xs text-slate-500" id="header-sub">Captura de Leads</p>
-      </div>
-      <button onclick="showScreen('config')" aria-label="Configurações" class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">
+    <div class="max-w-lg mx-auto px-4 py-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
+      <button id="header-event" onclick="showScreen('eventos')" aria-label="Eventos"></button>
+      <button onclick="showScreen('home')" aria-label="LeadStand – Início" class="justify-self-center flex items-center">
+        <span style="display:block;width:38px;height:38px;border-radius:11px;background:linear-gradient(145deg,#FB7185,#E11D48 55%,#BE123C);box-shadow:0 4px 12px rgba(225,29,72,.3)">
+          <svg viewBox="0 0 64 64" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M12 32 L32 14 L52 32 M17 29 V50 H47 V29"/><g fill="#fff" stroke="none"><circle cx="32" cy="34" r="5"/><path d="M23 50 a9 9 0 0 1 18 0 Z"/></g></svg>
+        </span>
+      </button>
+      <button onclick="showScreen('config')" aria-label="Configurações" class="justify-self-end w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">
         <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
       </button>
     </div>
@@ -543,7 +545,6 @@ Até mais!`
       document.getElementById('event-date').textContent = curEvent() ? fmtBR(curEvent().data) : '';
       document.getElementById('today-banner').classList.toggle('hidden', events.some(e => e.data === ymd(new Date())));
       document.getElementById('greeting').textContent = `${getGreeting()}${config.nome && config.nome !== 'Você' ? ', ' + config.nome : ''}!`;
-      document.getElementById('header-sub').textContent = curEvent() ? curEvent().nome : 'Captura de Leads';
     }
 
     // ================== EVENTOS ==================
@@ -565,6 +566,15 @@ Até mais!`
       p.className = 'text-sm mt-1 ' + (hoje ? 'text-slate-500' : 'text-amber-600 font-medium');
     }
 
+    function renderHeaderEvent() {
+      const b = document.getElementById('header-event'), e = curEvent();
+      const hoje = !!e && e.data === ymd(new Date());
+      b.className = 'justify-self-start min-w-0 max-w-full text-left rounded-xl px-2.5 py-1 ' + (hoje ? 'bg-slate-100 text-slate-700' : 'bg-amber-100 text-amber-800');
+      b.innerHTML = e
+        ? `<span class="block text-xs font-semibold truncate">${esc(e.nome)}</span><span class="block text-[10px] opacity-70">${fmtBR(e.data)}${hoje ? ' · hoje' : ''}</span>`
+        : `<span class="block text-xs font-semibold">Criar evento</span><span class="block text-[10px] opacity-70">nenhum ativo</span>`;
+    }
+
     function mudarMes(n) { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + n, 1); renderCalendario(); }
 
     function renderCalendario() {
@@ -579,6 +589,7 @@ Até mais!`
         html += `<button data-day="${iso}" class="h-10 rounded-xl text-sm relative ${sel ? 'btn-primary text-white font-semibold' : iso === today ? 'bg-slate-100 font-semibold' : ''}">${d}${has ? `<span class="absolute bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full ${sel ? 'bg-white' : 'bg-primary'}"></span>` : ''}</button>`;
       }
       document.getElementById('cal-grid').innerHTML = html;
+      renderHeaderEvent();
       document.getElementById('dia-titulo').textContent = (calSel === today ? 'Hoje · ' : '') + fmtBR(calSel);
       const evs = events.filter(e => e.data === calSel);
       document.getElementById('dia-eventos').innerHTML = evs.length ? evs.map(e => {
@@ -679,6 +690,7 @@ Até mais!`
       if (!SCREENS.includes(name)) name = 'home';
       if (sorteioTimer) { clearInterval(sorteioTimer); sorteioTimer = null; }
       if (!fromPop && location.hash !== '#' + name) history.pushState(null, '', '#' + name);
+      renderHeaderEvent();
       window.scrollTo(0, 0);
       SCREENS.forEach(s => {
         document.getElementById(`screen-${s}`).classList.add('hidden');
