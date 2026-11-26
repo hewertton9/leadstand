@@ -36,7 +36,40 @@
     .btn-primary:active { transform: scale(0.98); }
     .fade-in { animation: fadeIn 0.3s ease; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-    input:focus, textarea:focus { outline: none; box-shadow: 0 0 0 3px rgba(225,29,72,0.15); }
+    input:focus, textarea:focus, select:focus { outline: none; box-shadow: 0 0 0 3px rgba(225,29,72,0.15); }
+
+    /* ===== Dark mode ===== */
+    html.dark body { background-color: #090d16; color: #e2e8f0; }
+    html.dark #onboarding { background-color: #090d16; color: #e2e8f0; }
+    html.dark #app-header,
+    html.dark nav.fixed.bottom-0 { background-color: #0f172a; border-color: #1e293b; }
+    html.dark .card,
+    html.dark #screen-eventos .bg-white,
+    html.dark #screen-sorteio .bg-white,
+    html.dark #screen-config .bg-white,
+    html.dark #screen-novo .bg-white,
+    html.dark #screen-leads .bg-white,
+    html.dark #screen-home .bg-white,
+    html.dark #onboarding .bg-white { background-color: #111827; border-color: #1f2937; box-shadow: 0 1px 3px rgba(0,0,0,0.45); }
+    html.dark .text-slate-900,
+    html.dark .text-slate-800 { color: #f8fafc; }
+    html.dark .text-slate-700,
+    html.dark .text-slate-600 { color: #cbd5e1; }
+    html.dark .text-slate-500 { color: #94a3b8; }
+    html.dark .text-slate-400 { color: #64748b; }
+    html.dark .bg-slate-50 { background-color: #1e293b; }
+    html.dark .bg-slate-100 { background-color: #1e293b; color: #e2e8f0; }
+    html.dark .border-slate-100,
+    html.dark .border-slate-200,
+    html.dark .border-slate-300 { border-color: #334155; }
+    html.dark .divide-slate-50 > :not([hidden]) ~ :not([hidden]),
+    html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]) { border-color: #1e293b; }
+    html.dark input,
+    html.dark textarea,
+    html.dark select { background-color: #1e293b; color: #f8fafc; border-color: #334155; }
+    html.dark #msg-preview { background-color: rgba(16, 185, 129, 0.12); border-color: rgba(16, 185, 129, 0.25); color: #e2e8f0; }
+    html.dark #today-banner { background-color: rgba(245, 158, 11, 0.14); border-color: rgba(245, 158, 11, 0.35); }
+    html.dark #today-banner p { color: #fde68a; }
   
     /* ===== Splash / intro ===== */
     #splash{position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0B1120;color:#fff;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;text-align:center;padding:24px;overflow:hidden;transition:opacity .6s ease}
@@ -316,6 +349,17 @@
       </div>
 
       <div class="space-y-4">
+        <div class="bg-white rounded-2xl p-5 card flex items-center justify-between">
+          <div>
+            <span class="block text-sm font-medium text-slate-700">Modo escuro (Dark mode)</span>
+            <span class="block text-xs text-slate-500">Reduz o brilho da tela em ambientes escuros</span>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer shrink-0">
+            <input type="checkbox" id="toggle-dark-mode" class="sr-only peer">
+            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+          </label>
+        </div>
+
         <div class="bg-white rounded-2xl p-5 card space-y-4">
           <div>
             <label for="cfg-nome" class="block text-sm font-medium text-slate-700 mb-1.5">Seu nome</label>
@@ -404,6 +448,7 @@
 
     const defaultConfig = {
       autoWA: true,
+      darkMode: false,
       onboarded: false,
       msgGanhador: `🎉 Parabéns, [Nome]! Você foi o(a) ganhador(a) do sorteio no [Evento]! Sou [SeuNome] e vou te passar os detalhes para retirar o seu prêmio. 😊`,
       nome: '',
@@ -437,6 +482,24 @@ Até mais!`
     if (evHoje.length && !(evAtual && evAtual.data === hoje)) currentEventId = evHoje[evHoje.length - 1].id;
     else if (!evAtual) currentEventId = ([...events].sort((a, b) => b.data.localeCompare(a.data))[0] || {}).id || null;
     save();
+
+    function applyDarkMode() {
+      const enabled = !!config.darkMode;
+      document.documentElement.classList.toggle('dark', enabled);
+      const tgl = document.getElementById('toggle-dark-mode');
+      if (tgl) tgl.checked = enabled;
+      const metaTheme = document.querySelector('meta[name="theme-color"]');
+      if (metaTheme) metaTheme.setAttribute('content', enabled ? '#0f172a' : '#E11D48');
+    }
+
+    function toggleDarkMode(enabled) {
+      config.darkMode = !!enabled;
+      applyDarkMode();
+      save();
+      toast(config.darkMode ? 'Modo escuro ativado' : 'Modo claro ativado');
+    }
+
+    applyDarkMode();
 
     // ================== UTILS ==================
     function save() {
@@ -721,6 +784,7 @@ Até mais!`
     }
 
     function loadConfigUI() {
+      applyDarkMode();
       document.getElementById('cfg-nome').value = config.nome || '';
       document.getElementById('cfg-imob').value = config.imob || '';
       setLogoPreview('cfg', config.logo || '');
@@ -1235,6 +1299,7 @@ Até mais!`
     document.getElementById('input-nome')?.addEventListener('input', updatePreview);
     document.getElementById('onb-logo')?.addEventListener('change', e => lerImagemLogo(e.target.files?.[0], 'onb'));
     document.getElementById('cfg-logo')?.addEventListener('change', e => lerImagemLogo(e.target.files?.[0], 'cfg'));
+    document.getElementById('toggle-dark-mode')?.addEventListener('change', e => toggleDarkMode(e.target.checked));
 
     // start
     loadConfigUI();
