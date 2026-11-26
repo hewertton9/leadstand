@@ -113,13 +113,13 @@
         <div>
           <label class="block text-sm font-medium text-slate-700 mb-1.5">Logo da empresa <span class="text-slate-400 font-normal">(opcional · sai no PDF)</span></label>
           <div class="flex items-center gap-3">
-            <label for="onb-logo" class="flex-1 px-4 py-2.5 rounded-xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-600 text-center cursor-pointer hover:border-primary/50 transition">
+            <label for="onb-logo" class="flex-1 min-w-0 px-4 py-2.5 rounded-xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-600 text-center cursor-pointer hover:border-primary/50 transition truncate">
               Escolher imagem
             </label>
             <input type="file" id="onb-logo" accept="image/*" class="hidden" />
-            <div id="onb-logo-preview-wrap" class="hidden items-center gap-2">
-              <img id="onb-logo-preview" alt="Prévia do logo" class="w-11 h-11 rounded-[12px] object-cover bg-slate-100 border border-slate-200 shadow-sm" />
-              <button type="button" onclick="limparLogoDraft('onb')" class="text-xs text-red-500 font-medium px-2 py-1">Remover</button>
+            <div id="onb-logo-preview-wrap" class="hidden shrink-0 items-center gap-2">
+              <img id="onb-logo-preview" alt="Prévia do logo" class="w-11 h-11 shrink-0 rounded-[12px] object-cover bg-white border border-slate-200 shadow-sm" />
+              <button type="button" onclick="limparLogoDraft('onb')" class="text-xs text-red-500 font-medium px-1.5 py-1">Remover</button>
             </div>
           </div>
         </div>
@@ -328,13 +328,13 @@
           <div>
             <label class="block text-sm font-medium text-slate-700 mb-1.5">Logo da empresa <span class="text-slate-400 font-normal">(opcional · sai no PDF)</span></label>
             <div class="flex items-center gap-3">
-              <label for="cfg-logo" class="flex-1 px-4 py-2.5 rounded-xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-600 text-center cursor-pointer hover:border-primary/50 transition">
+              <label for="cfg-logo" class="flex-1 min-w-0 px-4 py-2.5 rounded-xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-600 text-center cursor-pointer hover:border-primary/50 transition truncate">
                 Escolher imagem
               </label>
               <input type="file" id="cfg-logo" accept="image/*" class="hidden" />
-              <div id="cfg-logo-preview-wrap" class="hidden items-center gap-2">
-                <img id="cfg-logo-preview" alt="Logo da empresa" class="w-11 h-11 rounded-[12px] object-cover bg-slate-100 border border-slate-200 shadow-sm" />
-                <button type="button" onclick="limparLogoDraft('cfg')" class="text-xs text-red-500 font-medium px-2 py-1">Remover</button>
+              <div id="cfg-logo-preview-wrap" class="hidden shrink-0 items-center gap-2">
+                <img id="cfg-logo-preview" alt="Logo da empresa" class="w-11 h-11 shrink-0 rounded-[12px] object-cover bg-white border border-slate-200 shadow-sm" />
+                <button type="button" onclick="limparLogoDraft('cfg')" class="text-xs text-red-500 font-medium px-1.5 py-1">Remover</button>
               </div>
             </div>
           </div>
@@ -522,7 +522,7 @@ Até mais!`
       setLogoPreview(prefix, '');
     }
 
-    function renderRoundedSquareLogo(img, size = 256, radiusRatio = 0.28, withBorder = false) {
+    function renderRoundedSquareLogo(img, size = 256, radiusRatio = 0.27, withBorder = false) {
       const canvas = document.createElement('canvas');
       canvas.width = size;
       canvas.height = size;
@@ -571,7 +571,7 @@ Até mais!`
         ctx.lineTo(inset, inset + ri);
         ctx.quadraticCurveTo(inset, inset, inset + ri, inset);
         ctx.closePath();
-        ctx.strokeStyle = 'rgba(15, 23, 42, 0.12)';
+        ctx.strokeStyle = 'rgba(15, 23, 42, 0.14)';
         ctx.lineWidth = 3;
         ctx.stroke();
         ctx.restore();
@@ -590,7 +590,7 @@ Até mais!`
       reader.onload = () => {
         const img = new Image();
         img.onload = () => {
-          const outUrl = renderRoundedSquareLogo(img, 256, 0.28, false);
+          const outUrl = renderRoundedSquareLogo(img, 256, 0.27, false);
           setLogoPreview(prefix, outUrl);
         };
         img.onerror = () => toast('Não foi possível carregar a imagem');
@@ -628,7 +628,7 @@ Até mais!`
         const img = new Image();
         img.onload = () => {
           try {
-            resolve(renderRoundedSquareLogo(img, size, 0.28, true));
+            resolve(renderRoundedSquareLogo(img, size, 0.27, true));
           } catch (e) {
             resolve(null);
           }
@@ -877,16 +877,18 @@ Até mais!`
       const empresaLogoUrl = await rasterizeRoundedLogo(config.logo, 240);
       const nomeEmpresa = (config.imob || '').trim();
       if (empresaLogoUrl) {
+        const logoSize = 18;
+        const logoY = 15;
         let textX = M;
         try {
-          doc.addImage(empresaLogoUrl, 'PNG', M, 14, 20, 20);
-          textX = M + 24;
+          doc.addImage(empresaLogoUrl, 'PNG', M, logoY, logoSize, logoSize);
+          textX = M + logoSize + 4;
         } catch (e) {}
 
         doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(15, 23, 42);
-        doc.text(ev.nome, textX, 21, { maxWidth: W - M - textX });
+        doc.text(ev.nome, textX, 22, { maxWidth: W - M - textX });
         doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(100, 116, 139);
-        doc.text('Data do evento: ' + fmtBR(ev.data), textX, 28, { maxWidth: W - M - textX });
+        doc.text('Data do evento: ' + fmtBR(ev.data), textX, 29, { maxWidth: W - M - textX });
       } else if (nomeEmpresa) {
         doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(15, 23, 42);
         doc.text(nomeEmpresa, M, 17.5, { maxWidth: W - 2 * M });
