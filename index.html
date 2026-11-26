@@ -1110,15 +1110,10 @@ Até mais!`
       esconderOnboarding();
       loadConfigUI();
       toast(`Bem-vindo(a), ${nome}!`);
-      // Sempre leva para criar o primeiro evento
-      showScreen('eventos');
-      setTimeout(() => {
-        const inp = document.getElementById('ev-nome');
-        if (inp) {
-          inp.focus();
-          toast('Crie o evento do stand para começar');
-        }
-      }, 400);
+      showScreen('home');
+      if (!events.length) {
+        setTimeout(() => toast('Crie um evento para começar'), 600);
+      }
     }
 
     function salvarConfig() {
