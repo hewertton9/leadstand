@@ -118,7 +118,7 @@
             </label>
             <input type="file" id="onb-logo" accept="image/*" class="hidden" />
             <div id="onb-logo-preview-wrap" class="hidden shrink-0 items-center gap-2">
-              <img id="onb-logo-preview" alt="Prévia do logo" class="w-11 h-11 shrink-0 rounded-[12px] object-cover bg-white border border-slate-200 shadow-sm" />
+              <img id="onb-logo-preview" alt="Prévia do logo" class="w-11 h-11 shrink-0 rounded-[12px] object-contain bg-white border border-slate-200 shadow-sm" />
               <button type="button" onclick="limparLogoDraft('onb')" class="text-xs text-red-500 font-medium px-1.5 py-1">Remover</button>
             </div>
           </div>
@@ -333,7 +333,7 @@
               </label>
               <input type="file" id="cfg-logo" accept="image/*" class="hidden" />
               <div id="cfg-logo-preview-wrap" class="hidden shrink-0 items-center gap-2">
-                <img id="cfg-logo-preview" alt="Logo da empresa" class="w-11 h-11 shrink-0 rounded-[12px] object-cover bg-white border border-slate-200 shadow-sm" />
+                <img id="cfg-logo-preview" alt="Logo da empresa" class="w-11 h-11 shrink-0 rounded-[12px] object-contain bg-white border border-slate-200 shadow-sm" />
                 <button type="button" onclick="limparLogoDraft('cfg')" class="text-xs text-red-500 font-medium px-1.5 py-1">Remover</button>
               </div>
             </div>
@@ -522,7 +522,7 @@ Até mais!`
       setLogoPreview(prefix, '');
     }
 
-    function renderRoundedSquareLogo(img, size = 256, radiusRatio = 0.27, withBorder = false) {
+    function renderRoundedSquareLogo(img, size = 256, radiusRatio = 0.27, withBorder = false, paddingRatio = 0.1) {
       const canvas = document.createElement('canvas');
       canvas.width = size;
       canvas.height = size;
@@ -547,13 +547,18 @@ Até mais!`
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(0, 0, size, size);
 
-      // Ajuste automático centralizado (object-fit: cover) sem distorcer a imagem
+      // Encaixe completo (contain) com margem interna para não cortar nenhuma parte da logo
       const iw = img.naturalWidth || img.width || size;
       const ih = img.naturalHeight || img.height || size;
-      const side = Math.min(iw, ih);
-      const sx = (iw - side) / 2;
-      const sy = (ih - side) / 2;
-      ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
+      const pad = size * paddingRatio;
+      const boxW = Math.max(1, size - pad * 2);
+      const boxH = Math.max(1, size - pad * 2);
+      const scale = Math.min(boxW / iw, boxH / ih);
+      const dw = iw * scale;
+      const dh = ih * scale;
+      const dx = (size - dw) / 2;
+      const dy = (size - dh) / 2;
+      ctx.drawImage(img, dx, dy, dw, dh);
       ctx.restore();
 
       if (withBorder) {
@@ -590,7 +595,7 @@ Até mais!`
       reader.onload = () => {
         const img = new Image();
         img.onload = () => {
-          const outUrl = renderRoundedSquareLogo(img, 256, 0.27, false);
+          const outUrl = renderRoundedSquareLogo(img, 256, 0.27, false, 0.1);
           setLogoPreview(prefix, outUrl);
         };
         img.onerror = () => toast('Não foi possível carregar a imagem');
@@ -628,7 +633,7 @@ Até mais!`
         const img = new Image();
         img.onload = () => {
           try {
-            resolve(renderRoundedSquareLogo(img, size, 0.27, true));
+            resolve(renderRoundedSquareLogo(img, size, 0.27, true, 0.1));
           } catch (e) {
             resolve(null);
           }
