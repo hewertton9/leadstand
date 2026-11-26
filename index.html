@@ -88,28 +88,54 @@
   <script>try{if(sessionStorage.getItem('ls_splash')){document.getElementById('splash').remove();}}catch(e){}</script>
 
   <!-- ========== HEADER ========== -->
-  <header class="bg-white border-b border-slate-100 sticky top-0 z-40">
-    <div class="max-w-lg mx-auto px-4 py-3 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2">
-      <button id="header-event" onclick="showScreen('eventos')" aria-label="Eventos"></button>
-      <button onclick="showScreen('home')" aria-label="LeadStand – Início" class="justify-self-center flex items-center">
+  <header id="app-header" class="bg-white border-b border-slate-100 sticky top-0 z-40">
+    <div class="max-w-lg mx-auto px-4 py-3 flex items-center justify-center relative">
+      <button onclick="showScreen('home')" aria-label="LeadStand – Início" class="flex items-center">
         <span style="display:block;width:38px;height:38px;border-radius:11px;background:linear-gradient(145deg,#FB7185,#E11D48 55%,#BE123C);box-shadow:0 4px 12px rgba(225,29,72,.3)">
           <svg viewBox="0 0 64 64" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M12 32 L32 14 L52 32 M17 29 V50 H47 V29"/><g fill="#fff" stroke="none"><circle cx="32" cy="34" r="5"/><path d="M23 50 a9 9 0 0 1 18 0 Z"/></g></svg>
         </span>
       </button>
-      <button onclick="showScreen('config')" aria-label="Configurações" class="justify-self-end w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">
+      <button onclick="showScreen('config')" aria-label="Configurações" class="absolute right-4 w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">
         <svg class="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
       </button>
     </div>
   </header>
+
+  <!-- ========== ONBOARDING ========== -->
+  <div id="onboarding" class="fixed inset-0 z-[100] bg-slate-50 flex flex-col items-center justify-center px-6 hidden">
+    <div class="w-full max-w-sm fade-in">
+      <div class="flex justify-center mb-6">
+        <span style="display:block;width:72px;height:72px;border-radius:20px;background:linear-gradient(145deg,#FB7185,#E11D48 55%,#BE123C);box-shadow:0 12px 32px rgba(225,29,72,.35)">
+          <svg viewBox="0 0 64 64" fill="none" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%;display:block"><path d="M12 32 L32 14 L52 32 M17 29 V50 H47 V29"/><g fill="#fff" stroke="none"><circle cx="32" cy="34" r="5"/><path d="M23 50 a9 9 0 0 1 18 0 Z"/></g></svg>
+        </span>
+      </div>
+      <h1 class="text-2xl font-bold text-center text-slate-900 mb-1">Bem-vindo ao LeadStand</h1>
+      <p class="text-sm text-center text-slate-500 mb-8">Como podemos te chamar?</p>
+      <div class="bg-white rounded-2xl p-5 card space-y-4">
+        <div>
+          <label for="onb-nome" class="block text-sm font-medium text-slate-700 mb-1.5">Seu nome</label>
+          <input type="text" id="onb-nome" placeholder="Ex: Maria Silva" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-base" autocomplete="name" />
+        </div>
+        <div>
+          <label for="onb-imob" class="block text-sm font-medium text-slate-700 mb-1.5">Empresa <span class="text-slate-400 font-normal">(opcional)</span></label>
+          <input type="text" id="onb-imob" placeholder="Ex: Minha Imobiliária" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-base" />
+        </div>
+        <button onclick="salvarOnboarding()" class="btn-primary w-full text-white font-semibold py-4 rounded-xl text-base shadow-lg shadow-rose-200">
+          Começar
+        </button>
+      </div>
+      <p class="text-xs text-center text-slate-400 mt-6 leading-relaxed">Os leads ficam só neste aparelho.<br>Use o mesmo celular no evento.</p>
+    </div>
+  </div>
 
   <!-- ========== MAIN CONTENT ========== -->
   <main class="max-w-lg mx-auto px-4 pb-28 pt-4" id="app">
 
     <!-- ===== DASHBOARD ===== -->
     <section id="screen-home" class="fade-in">
-      <div class="mb-5">
+      <div class="mb-5 text-center">
         <p class="text-slate-500 text-sm" id="greeting">Bom dia!</p>
-        <h2 class="text-2xl font-bold text-slate-900" id="event-name">Nenhum evento</h2>
+        <h2 class="text-2xl font-bold text-slate-900 mt-1" id="event-name">Nenhum evento</h2>
         <p class="text-sm text-slate-500" id="event-date"></p>
       </div>
 
@@ -363,8 +389,9 @@
 
     const defaultConfig = {
       autoWA: true,
+      onboarded: false,
       msgGanhador: `🎉 Parabéns, [Nome]! Você foi o(a) ganhador(a) do sorteio no [Evento]! Sou [SeuNome] e vou te passar os detalhes para retirar o seu prêmio. 😊`,
-      nome: 'Você',
+      nome: '',
       imob: '',
       mensagem: `Olá [Nome]! 😊
 
@@ -376,6 +403,8 @@ Até mais!`
     };
 
     config = { ...defaultConfig, ...config };
+    // migração: quem já tinha nome configurado não vê onboarding de novo
+    if (!config.onboarded && config.nome && config.nome !== 'Você') config.onboarded = true;
 
     // migração: leads antigos viram eventos (um por dia)
     leads.forEach(l => {
@@ -431,7 +460,7 @@ Até mais!`
     }
 
     function fill(tpl, nome) {
-      const map = { Nome: nome, SeuNome: config.nome, Imob: config.imob, Empresa: config.imob, Evento: (curEvent() || {}).nome || '' };
+      const map = { Nome: nome, SeuNome: config.nome || 'Você', Imob: config.imob, Empresa: config.imob, Evento: (curEvent() || {}).nome || '' };
       return tpl.replace(/\[(Nome|SeuNome|Imob|Empresa|Evento)\]/g, (_, k) => map[k]);
     }
 
@@ -537,14 +566,15 @@ Até mais!`
     }
 
     function loadConfigUI() {
-      document.getElementById('cfg-nome').value = config.nome;
-      document.getElementById('cfg-imob').value = config.imob;
+      document.getElementById('cfg-nome').value = config.nome || '';
+      document.getElementById('cfg-imob').value = config.imob || '';
       document.getElementById('cfg-mensagem').value = config.mensagem;
       document.getElementById('cfg-msg-ganhador').value = config.msgGanhador;
       document.getElementById('event-name').textContent = curEvent() ? curEvent().nome : 'Nenhum evento';
       document.getElementById('event-date').textContent = curEvent() ? fmtBR(curEvent().data) : '';
       document.getElementById('today-banner').classList.toggle('hidden', events.some(e => e.data === ymd(new Date())));
-      document.getElementById('greeting').textContent = `${getGreeting()}${config.nome && config.nome !== 'Você' ? ', ' + config.nome : ''}!`;
+      const nome = (config.nome || '').trim();
+      document.getElementById('greeting').textContent = nome ? `${getGreeting()}, ${nome}!` : `${getGreeting()}!`;
     }
 
     // ================== EVENTOS ==================
@@ -566,14 +596,7 @@ Até mais!`
       p.className = 'text-sm mt-1 ' + (hoje ? 'text-slate-500' : 'text-amber-600 font-medium');
     }
 
-    function renderHeaderEvent() {
-      const b = document.getElementById('header-event'), e = curEvent();
-      const hoje = !!e && e.data === ymd(new Date());
-      b.className = 'justify-self-start min-w-0 max-w-full text-left rounded-xl px-2.5 py-1 ' + (hoje ? 'bg-slate-100 text-slate-700' : 'bg-amber-100 text-amber-800');
-      b.innerHTML = e
-        ? `<span class="block text-xs font-semibold truncate">${esc(e.nome)}</span><span class="block text-[10px] opacity-70">${fmtBR(e.data)}${hoje ? ' · hoje' : ''}</span>`
-        : `<span class="block text-xs font-semibold">Criar evento</span><span class="block text-[10px] opacity-70">nenhum ativo</span>`;
-    }
+    function renderHeaderEvent() { /* header limpo: só logo + engrenagem */ }
 
     function mudarMes(n) { calMonth = new Date(calMonth.getFullYear(), calMonth.getMonth() + n, 1); renderCalendario(); }
 
@@ -901,11 +924,50 @@ Até mais!`
       toast('Planilha baixada!');
     }
 
+    function precisaOnboarding() {
+      return !config.onboarded;
+    }
+
+    function mostrarOnboarding() {
+      const el = document.getElementById('onboarding');
+      if (!el) return;
+      el.classList.remove('hidden');
+      document.getElementById('app-header')?.classList.add('hidden');
+      document.querySelector('nav')?.classList.add('hidden');
+      document.getElementById('app')?.classList.add('hidden');
+      setTimeout(() => document.getElementById('onb-nome')?.focus(), 150);
+    }
+
+    function esconderOnboarding() {
+      document.getElementById('onboarding')?.classList.add('hidden');
+      document.getElementById('app-header')?.classList.remove('hidden');
+      document.querySelector('nav')?.classList.remove('hidden');
+      document.getElementById('app')?.classList.remove('hidden');
+    }
+
+    function salvarOnboarding() {
+      const nome = document.getElementById('onb-nome')?.value.trim();
+      if (!nome) {
+        toast('Digite seu nome');
+        document.getElementById('onb-nome')?.focus();
+        return;
+      }
+      config.nome = nome;
+      config.imob = document.getElementById('onb-imob')?.value.trim() || '';
+      config.onboarded = true;
+      save();
+      esconderOnboarding();
+      loadConfigUI();
+      toast(`Bem-vindo(a), ${nome}!`);
+      showScreen(events.length ? 'home' : 'eventos');
+    }
+
     function salvarConfig() {
-      config.nome = document.getElementById('cfg-nome').value.trim() || 'Você';
+      config.nome = document.getElementById('cfg-nome').value.trim() || config.nome || '';
       config.imob = document.getElementById('cfg-imob').value.trim() || '';
       config.mensagem = document.getElementById('cfg-mensagem').value || defaultConfig.mensagem;
       config.msgGanhador = document.getElementById('cfg-msg-ganhador').value || defaultConfig.msgGanhador;
+      if (config.nome) config.onboarded = true;
       save();
       loadConfigUI();
       toast('Configurações salvas!');
@@ -939,6 +1001,12 @@ Até mais!`
     const tgl = document.getElementById('toggle-whatsapp');
     tgl.checked = config.autoWA !== false;
     tgl.addEventListener('change', () => { config.autoWA = tgl.checked; save(); updateSaveLabel(); });
+    document.getElementById('onb-nome')?.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); document.getElementById('onb-imob')?.focus(); }
+    });
+    document.getElementById('onb-imob')?.addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); salvarOnboarding(); }
+    });
     document.addEventListener('click', e => {
       const b = e.target.closest('[data-wa],[data-wa-win],[data-del],[data-edit],[data-day],[data-ev-open],[data-ev-pdf],[data-ev-del]');
       if (!b) return;
@@ -952,9 +1020,17 @@ Até mais!`
       else if (d.evPdf) exportarPDF(d.evPdf);
       else if (d.evDel) excluirEvento(d.evDel);
     });
-    window.addEventListener('popstate', () => showScreen(location.hash.slice(1) || 'home', true));
+    window.addEventListener('popstate', () => {
+      if (precisaOnboarding()) { mostrarOnboarding(); return; }
+      showScreen(location.hash.slice(1) || 'home', true);
+    });
     if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
-    showScreen(location.hash.slice(1) || (events.length ? 'home' : 'eventos'), true);
+
+    if (precisaOnboarding()) {
+      mostrarOnboarding();
+    } else {
+      showScreen(location.hash.slice(1) || (events.length ? 'home' : 'eventos'), true);
+    }
 
     // ===== intro =====
     (function () {
@@ -962,7 +1038,9 @@ Até mais!`
       if (!el) return;
       try { sessionStorage.setItem('ls_splash', '1'); } catch (e) {}
       const ev = curEvent();
-      document.getElementById('splash-sub').textContent = getGreeting() + (ev ? ' · ' + ev.nome : '');
+      const nome = (config.nome || '').trim();
+      document.getElementById('splash-sub').textContent =
+        (nome ? getGreeting() + ', ' + nome : getGreeting()) + (ev ? ' · ' + ev.nome : '');
       document.getElementById('splash-imob').textContent = config.imob || '';
       const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       let done = false;
