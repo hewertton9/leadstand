@@ -1384,10 +1384,9 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
       const el = document.getElementById('splash');
       if (!el) return;
       try { sessionStorage.setItem('ls_splash', '1'); } catch (e) {}
-      const ev = curEvent();
       const nome = (config.nome || '').trim();
       document.getElementById('splash-sub').textContent =
-        (nome ? getGreeting() + ', ' + nome : getGreeting()) + (ev ? ' · ' + ev.nome : '');
+        nome ? getGreeting() + ', ' + nome : getGreeting();
       document.getElementById('splash-imob').textContent = config.imob || '';
       const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       let done = false;
