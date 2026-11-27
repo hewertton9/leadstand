@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>LeadStand – Captura de Leads</title>
   <link rel="manifest" href="manifest.json" />
   <link rel="apple-touch-icon" href="apple-touch-icon.png" />
@@ -39,7 +39,7 @@
     input:focus, textarea:focus, select:focus { outline: none; box-shadow: 0 0 0 3px rgba(225,29,72,0.15); }
 
     /* ===== Dark mode ===== */
-    html.dark body { background-color: #090d16; color: #e2e8f0; }
+    html.dark body.bg-slate-50 { background-color: #090d16; color: #e2e8f0; }
     html.dark #onboarding { background-color: #090d16; color: #e2e8f0; }
     html.dark #app-header,
     html.dark nav.fixed.bottom-0 { background-color: #0f172a; border-color: #1e293b; }
@@ -232,11 +232,11 @@
       <div class="bg-white rounded-2xl p-5 card space-y-4">
         <div>
           <label for="input-nome" class="block text-sm font-medium text-slate-700 mb-1.5">Nome completo</label>
-          <input type="text" id="input-nome" placeholder="Ex: Maria Silva" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-base" autocomplete="name" />
+          <input type="text" id="input-nome" placeholder="Ex: Maria Silva" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-base" autocomplete="off" />
         </div>
         <div>
           <label for="input-telefone" class="block text-sm font-medium text-slate-700 mb-1.5">Telefone (WhatsApp)</label>
-          <input type="tel" id="input-telefone" placeholder="(43) 99999-9999" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-base" inputmode="numeric" autocomplete="tel" />
+          <input type="tel" id="input-telefone" placeholder="(43) 99999-9999" class="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-base" inputmode="numeric" autocomplete="off" />
         </div>
         <div id="edit-extra" class="hidden"><div class="grid grid-cols-2 gap-3">
           <div><label for="input-resultado" class="block text-sm font-medium text-slate-700 mb-1.5">Resultado</label>
@@ -398,6 +398,10 @@
           Salvar Configurações
         </button>
 
+        <button onclick="exportarPlanilha()" class="w-full py-3 text-slate-700 text-sm font-medium border border-slate-200 rounded-xl bg-white">
+          📊 Exportar planilha (CSV)
+        </button>
+
         <button onclick="limparTudo()" class="w-full py-3 text-red-600 text-sm font-medium border border-red-200 rounded-xl bg-red-50">
           Limpar todos os leads
         </button>
@@ -433,6 +437,7 @@
 
   <script>
     // ================== STATE ==================
+    let toastTimer;
     function load(key, fallback) {
       try { const v = JSON.parse(localStorage.getItem(key)); return v ?? fallback; } catch (e) { return fallback; }
     }
@@ -516,7 +521,6 @@ Até mais!`
       }
     }
 
-    let toastTimer;
     function toast(msg) {
       const t = document.getElementById('toast');
       t.textContent = msg;
@@ -527,7 +531,9 @@ Até mais!`
     }
 
     function formatPhone(value) {
-      const n = value.replace(/\D/g, '').slice(0, 11);
+      let n = value.replace(/\D/g, '');
+      if (n.length > 11 && n.startsWith('55')) n = n.slice(2);
+      n = n.replace(/^0+/, '').slice(0, 11);
       if (n.length <= 2) return n.length ? `(${n}` : '';
       if (n.length <= 6) return `(${n.slice(0,2)}) ${n.slice(2)}`;
       if (n.length <= 10) return `(${n.slice(0,2)}) ${n.slice(2,6)}-${n.slice(6)}`;
@@ -543,6 +549,10 @@ Até mais!`
       return tpl.replace(/\[(Nome|SeuNome|Imob|Empresa|Evento)\]/g, (_, k) => map[k]);
     }
 
+    function norm(str) {
+      return String(str).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    }
+
     function onlyNumbers(str) {
       return str.replace(/\D/g, '');
     }
@@ -552,12 +562,6 @@ Até mais!`
       if (h < 12) return 'Bom dia';
       if (h < 18) return 'Boa tarde';
       return 'Boa noite';
-    }
-
-    function isToday(iso) {
-      const d = new Date(iso);
-      const now = new Date();
-      return d.toDateString() === now.toDateString();
     }
 
     // ================== LOGO EMPRESA (ONBOARDING / CONFIG / PDF) ==================
@@ -688,8 +692,7 @@ Até mais!`
               h = maxH;
               w = h * ratio;
             }
-            const fitted = fitImageDataUrl(img, 480, 26);
-            resolve({ dataUrl: fitted.dataUrl, w, h });
+            resolve({ dataUrl, w, h });
           } catch (e) {
             resolve(null);
           }
@@ -731,10 +734,10 @@ Até mais!`
 
     function renderLeads() {
       const leads = evLeads();
-      const q = (document.getElementById('search-leads')?.value || '').toLowerCase();
+      const q = norm(document.getElementById('search-leads')?.value || '');
       document.getElementById('leads-evento').textContent = curEvent() ? curEvent().nome + ' · ' + fmtBR(curEvent().data) : 'Nenhum evento selecionado';
       const filtered = leads.filter(l => 
-        l.nome.toLowerCase().includes(q) || l.telefone.includes(q) || (onlyNumbers(q) && onlyNumbers(l.telefone).includes(onlyNumbers(q)))
+        norm(l.nome).includes(q) || l.telefone.includes(q) || (onlyNumbers(q) && onlyNumbers(l.telefone).includes(onlyNumbers(q)))
       ).reverse();
 
       const el = document.getElementById('leads-list');
@@ -803,7 +806,12 @@ Até mais!`
     function curEvent() { return events.find(e => e.id === currentEventId) || null; }
     function evLeads() { return leads.filter(l => l.eventId === currentEventId); }
     function brl(n) { return 'R$ ' + Number(n).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
-    function parseValor(v) { v = String(v).trim(); if (!v) return 0; if (v.includes(',')) v = v.replace(/\./g, '').replace(',', '.'); return parseFloat(v) || 0; }
+    function parseValor(v) {
+      v = String(v).trim(); if (!v) return 0;
+      if (v.includes(',')) v = v.replace(/\./g, '').replace(',', '.');
+      else if (/^\d{1,3}(\.\d{3})+$/.test(v)) v = v.replace(/\./g, '');
+      return parseFloat(v) || 0;
+    }
 
     let calSel = ymd(new Date());
     let calMonth = new Date();
@@ -925,6 +933,9 @@ Até mais!`
       toast(mime === 'application/pdf' ? 'PDF baixado!' : 'Arquivo baixado!');
     }
 
+    // Helvetica do jsPDF não tem emoji/símbolos fora do Latin-1
+    const pdfTxt = t => String(t).replace(/[^\x20-\x7E\u00A0-\u00FF]/g, '').trim();
+
     async function exportarPDF(id) {
       const ev = events.find(e => e.id === (id || currentEventId));
       if (!ev) { toast('Crie um evento primeiro'); return; }
@@ -947,19 +958,19 @@ Até mais!`
         } catch (e) {}
 
         doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(15, 23, 42);
-        doc.text(ev.nome, textX, 22, { maxWidth: W - M - textX });
+        doc.text(pdfTxt(ev.nome), textX, 22, { maxWidth: W - M - textX });
         doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(100, 116, 139);
         doc.text('Data do evento: ' + fmtBR(ev.data), textX, 29, { maxWidth: W - M - textX });
       } else if (nomeEmpresa) {
         doc.setFont('helvetica', 'bold'); doc.setFontSize(11); doc.setTextColor(15, 23, 42);
-        doc.text(nomeEmpresa, M, 17.5, { maxWidth: W - 2 * M });
+        doc.text(pdfTxt(nomeEmpresa), M, 17.5, { maxWidth: W - 2 * M });
         doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(15, 23, 42);
-        doc.text(ev.nome, M, 25, { maxWidth: W - 2 * M });
+        doc.text(pdfTxt(ev.nome), M, 25, { maxWidth: W - 2 * M });
         doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(100, 116, 139);
         doc.text('Data do evento: ' + fmtBR(ev.data), M, 31.5, { maxWidth: W - 2 * M });
       } else {
         doc.setFont('helvetica', 'bold'); doc.setFontSize(15); doc.setTextColor(15, 23, 42);
-        doc.text(ev.nome, M, 21, { maxWidth: W - 2 * M });
+        doc.text(pdfTxt(ev.nome), M, 21, { maxWidth: W - 2 * M });
         doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(100, 116, 139);
         doc.text('Data do evento: ' + fmtBR(ev.data), M, 28, { maxWidth: W - 2 * M });
       }
@@ -998,7 +1009,7 @@ Até mais!`
         margin: { left: M, right: M, bottom: 22 },
         theme: 'plain',
         head: [['Nome', 'Telefone', 'Resultado', 'Valor']],
-        body: list.map(l => [l.nome, l.telefone, l.resultado || 'Pendente', l.valor ? brl(l.valor) : '-']),
+        body: list.map(l => [pdfTxt(l.nome), l.telefone, l.resultado || 'Pendente', l.valor ? brl(l.valor) : '-']),
         styles: { fontSize: 8, cellPadding: 2.2, textColor: [15, 23, 42] },
         headStyles: { fillColor: [241, 245, 249], textColor: [71, 85, 105], fontStyle: 'bold' },
         alternateRowStyles: { fillColor: [248, 250, 252] }
@@ -1032,6 +1043,7 @@ Até mais!`
       if (sorteioTimer) { clearInterval(sorteioTimer); sorteioTimer = null; }
       if (!fromPop && location.hash !== '#' + name) history.pushState(null, '', '#' + name);
       renderHeaderEvent();
+      updateStats();
       window.scrollTo(0, 0);
       SCREENS.forEach(s => {
         document.getElementById(`screen-${s}`).classList.add('hidden');
@@ -1075,7 +1087,7 @@ Até mais!`
 
     function updateSaveLabel() {
       const wa = document.getElementById('toggle-whatsapp').checked;
-      document.getElementById('btn-salvar').textContent = (editingId ? 'Atualizar' : 'Salvar') + (wa ? ' e Abrir WhatsApp' : '');
+      document.getElementById('btn-salvar').textContent = (editingId ? 'Atualizar' : 'Salvar') + (wa && !editingId ? ' e Abrir WhatsApp' : '');
     }
 
     function salvarLead() {
@@ -1103,7 +1115,7 @@ Até mais!`
       if (ok) toast(wasEditing ? 'Lead atualizado!' : 'Lead salvo!');
 
       // síncrono, dentro do gesto do usuário (evita bloqueio de popup no celular)
-      if (openWA) abrirWhatsApp(lead.telefone, fill(config.mensagem, lead.nome));
+      if (openWA && !wasEditing && ok) abrirWhatsApp(lead.telefone, fill(config.mensagem, lead.nome));
 
       if (wasEditing) { showScreen('leads'); return; }
       document.getElementById('input-nome').value = '';
@@ -1152,6 +1164,20 @@ Até mais!`
 
     let sorteioTimer = null;
 
+    // um telefone = uma chance; quem já ganhou não concorre de novo
+    function poolSorteio() {
+      const all = evLeads();
+      const winPhones = new Set(all.filter(l => winners.includes(l.id)).map(l => onlyNumbers(l.telefone)));
+      const seen = new Set();
+      return all.filter(l => {
+        if (winners.includes(l.id)) return false;
+        const t = onlyNumbers(l.telefone);
+        if (winPhones.has(t) || seen.has(t)) return false;
+        seen.add(t);
+        return true;
+      });
+    }
+
     function renderWinners() {
       const w = winners.map(id => leads.find(l => l.id === id)).filter(l => l && l.eventId === currentEventId);
       document.getElementById('winners-box').innerHTML = w.length
@@ -1162,7 +1188,7 @@ Até mais!`
 
     function resetSorteioUI() {
       const leads = evLeads();
-      const pool = leads.filter(l => !winners.includes(l.id));
+      const pool = poolSorteio();
       const status = !leads.length ? 'Cadastre leads primeiro' : !pool.length ? 'Todos os leads já foram sorteados' : `Pronto para sortear (${pool.length} concorrendo)`;
       document.getElementById('sorteio-result').innerHTML = `<div class="w-20 h-20 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center text-4xl">🎁</div><p class="text-slate-500" id="sorteio-status">${status}</p>`;
       document.getElementById('btn-sortear').disabled = !pool.length;
@@ -1179,7 +1205,7 @@ Até mais!`
 
     function realizarSorteio() {
       const leads = evLeads();
-      const pool = leads.filter(l => !winners.includes(l.id));
+      const pool = poolSorteio();
       if (!pool.length || sorteioTimer) return;
       const btn = document.getElementById('btn-sortear');
       const result = document.getElementById('sorteio-result');
@@ -1279,7 +1305,7 @@ Até mais!`
     }
 
     function limparTudo() {
-      if (!confirm('Tem certeza? Todos os leads serão apagados (uma planilha de backup será baixada antes).')) return;
+      if (!confirm('Tem certeza? Todos os leads E eventos serão apagados (uma planilha de backup será baixada antes, se houver leads).')) return;
       if (leads.length) exportarPlanilha(true);
       leads = [];
       winners = [];
@@ -1302,6 +1328,7 @@ Até mais!`
     document.getElementById('toggle-dark-mode')?.addEventListener('change', e => toggleDarkMode(e.target.checked));
 
     // start
+    try { navigator.storage?.persist?.(); } catch (e) {}
     loadConfigUI();
     updateStats();
     renderRecent();
@@ -1337,9 +1364,10 @@ Até mais!`
 
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   let atualizacaoAplicada = false;
+  const jaTinhaController = !!navigator.serviceWorker.controller;
 
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (atualizacaoAplicada) return;
+    if (!jaTinhaController || atualizacaoAplicada) return;
     atualizacaoAplicada = true;
     window.location.reload();
   });

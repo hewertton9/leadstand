@@ -1,5 +1,18 @@
 
-const CACHE = 'leadstand-v11';
+const CACHE = 'leadstand-v12';
+
+// Se a rede demorar mais que isso, abre pelo cache (Wi-Fi ruim em evento)
+const REDE_TIMEOUT = 4000;
+
+function fetchComTimeout(request, ms, opts) {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error('timeout')), ms);
+    fetch(request, opts).then(
+      r => { clearTimeout(t); resolve(r); },
+      e => { clearTimeout(t); reject(e); }
+    );
+  });
+}
 
 const LOCAL = [
   './',
@@ -79,21 +92,21 @@ self.addEventListener('fetch', event => {
 
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request, { cache: 'no-store' })
+      fetchComTimeout(request, REDE_TIMEOUT, { cache: 'no-store' })
         .then(response => {
           if (response.ok) {
             const copy = response.clone();
-            caches.open(CACHE).then(cache =>
-              cache.put('./index.html', copy)
+            event.waitUntil(
+              caches.open(CACHE).then(cache => cache.put('./index.html', copy))
             );
           }
           return response;
         })
         .catch(async () => {
           return (
-            await caches.match(request) ||
+            await caches.match(request, { ignoreSearch: true }) ||
             await caches.match('./index.html') ||
-            Response.error()
+            fetch(request)
           );
         })
     );
@@ -102,17 +115,17 @@ self.addEventListener('fetch', event => {
 
   if (url.origin === self.location.origin) {
     event.respondWith(
-      fetch(request)
+      fetchComTimeout(request, REDE_TIMEOUT)
         .then(response => {
           if (response.ok) {
             const copy = response.clone();
-            caches.open(CACHE).then(cache =>
-              cache.put(request, copy)
+            event.waitUntil(
+              caches.open(CACHE).then(cache => cache.put(request, copy))
             );
           }
           return response;
         })
-        .catch(() => caches.match(request))
+        .catch(async () => (await caches.match(request)) || fetch(request))
     );
     return;
   }
@@ -122,8 +135,8 @@ self.addEventListener('fetch', event => {
       return hit || fetch(request).then(response => {
         if (response.ok || response.type === 'opaque') {
           const copy = response.clone();
-          caches.open(CACHE).then(cache =>
-            cache.put(request, copy)
+          event.waitUntil(
+            caches.open(CACHE).then(cache => cache.put(request, copy))
           );
         }
         return response;
